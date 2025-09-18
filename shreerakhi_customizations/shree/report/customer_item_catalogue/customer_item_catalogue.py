@@ -6,7 +6,7 @@ from frappe import _
 
 def execute(filters=None):
     columns = [
-        {"label": "Image", "fieldname": "image", "fieldtype": "Data", "width": 220},
+        {"label": "Image", "fieldname": "image_html", "fieldtype": "HTML", "width": 220},
         {"label": "Item Code", "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 150},
         {"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 200},
         {"label": "Item Group", "fieldname": "item_group", "fieldtype": "Link", "options": "Item Group", "width": 150},
@@ -16,6 +16,9 @@ def execute(filters=None):
     ]
 
     price_list = (filters or {}).get("price_list") or "Standard Selling"
+
+    base_url = get_url()
+    data = []
 
     sql_query = """
         SELECT 
@@ -59,15 +62,34 @@ def execute(filters=None):
             )
     """
 
-    data = frappe.db.sql(sql_query, {"price_list": price_list}, as_dict=1)
+    try:
+        data = frappe.db.sql(sql_query, {"price_list": price_list}, as_dict=1) or []
+    except Exception as e:
+        frappe.log_error(f"Customer Item Catalogue query failed: {e}")
+
+    # ✅ Ensure image is always absolute URL
+    for row in data:
+        img = row.get("image")
+        if img:
+            if not img.startswith("http"):
+                img = f"{base_url}{img}"
+            row["image"] = img  # overwrite for PDF template also
+            row["image_html"] = f"""
+                <img src="{img}" 
+                     style="width:120px; height:120px; object-fit:contain; border:1px solid #ddd; border-radius:6px;">
+            """
+        else:
+            row["image_html"] = """
+                <div style="width:120px; height:120px; border:1px solid #eee; background:#fafafa;"></div>
+            """
+
     return columns, data
 
 
 @frappe.whitelist()
 def download_customer_catalogue(price_list=None):
     # Run the report
-    result = execute(filters={"price_list": price_list})
-    columns, data = result
+    columns, data = execute(filters={"price_list": price_list})
 
     base_url = get_url()
     context = {

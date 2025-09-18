@@ -5,88 +5,93 @@
     <title>Customer Item Catalogue</title>
     <style>
         body {
-            font-family: "Helvetica", Arial, sans-serif;
-            margin: 20px;
-            color: #333;
+            font-family: "Georgia", serif;
+            margin: 30px;
+            background-color: #f2be7a;
+            color: #9f5959;
         }
+
+        /* Page Header */
         .header {
             text-align: center;
             margin-bottom: 30px;
         }
-        .header img {
-            max-height: 80px;
-        }
-        .header h1 {
-            margin: 10px 0 5px 0;
-            font-size: 28px;
-        }
-        .header p {
-            font-size: 14px;
-            color: #666;
-        }
-        .grid-container {
+        .header img { width: 120px; margin-bottom: 10px; }
+        .header h1 { font-size: 36px; font-style: italic; font-weight: 400; color: #4b2007df; margin: 0; }
+        .header p { font-size: 16px; color: #4a2a13e0; }
+
+        /* Product Card */
+        .product {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: flex-start;
-            gap: 15px;
-        }
-        .item-card {
-            width: 200px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            box-sizing: border-box;
-            text-align: center;
+            align-items: flex-start;
+            margin-bottom: 25px;
+            padding: 15px;
+            border-radius: 12px;
+            background-color: #f8d9b0; /* subtle card background */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.75);
             page-break-inside: avoid;
         }
-        .item-card img {
-            width: 180px;
-            height: 180px;
-            object-fit: contain;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            margin-bottom: 10px;
+        .product img {
+            width: 200px;
+            height: 200px;
+            border-radius: 12px;
+            object-fit: cover;
+            margin-right: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         }
-        .item-card h3 {
-            font-size: 16px;
-            margin: 5px 0;
-        }
-        .item-card p {
-            font-size: 12px;
-            margin: 2px 0;
-            color: #555;
-        }
+        .details { flex: 1; }
+        .details h3 { margin: 0; font-size: 18px; color: #362420; }
+        .details p { font-size: 13px; color: #4d4036; margin: 5px 0; }
         .price {
             font-weight: bold;
-            color: #000;
+            font-size: 16px;
+            color: #b87333; /* golden color for price */
+            margin-left: auto;
+            white-space: nowrap;
         }
+
+        /* Page break */
+        .page-break { page-break-after: always; }
+        .page-number { text-align: center; font-size: 12px; color: #4d4036; margin-bottom: 5px; }
+
     </style>
 </head>
 <body>
 
-    <!-- Header -->
-    <div class="header">
-        <img src="{{ base_url }}/assets/shreerakhi_customizations/images/logo.png" alt="Company Logo">
-        <h1>Customer Item Catalogue</h1>
-        <p>Price List: {{ price_list or 'Standard Selling' }}</p>
-    </div>
+{% set placeholder = base_url ~ "/assets/shreerakhi_customizations/images/placeholder.png" %}
 
-    {% set placeholder = base_url ~ "/assets/shreerakhi_customizations/images/placeholder.png" %}
+{% for item in items %}
+    {% if loop.index0 % 4 == 0 %}
+        {% if loop.index0 != 0 %}
+            <!-- Page number before break -->
+            <div class="page-number">Page {{ (loop.index0 // 4) }}</div>
+            <div class="page-break"></div>
+        {% endif %}
+        <!-- Header for each page -->
+        <div class="header">
+            <img src="https://i.postimg.cc/KjrmwYGD/shree-logo-removebg-preview.png" alt="Shree Logo">
+            <h1>Item Catalogue</h1>
+        </div>
+    {% endif %}
 
-    <!-- Items Grid -->
-    <div class="grid-container">
-        {% for item in items %}
-        <div class="item-card">
-            <img src="{{ (item.image and (base_url ~ item.image)) or placeholder }}"
-                 alt="{{ item.item_name or 'No Image' }}">
+    <!-- Product Row -->
+    <div class="product">
+        <img src="{{ (item.image and item.image) or placeholder }}" alt="{{ item.item_name or 'No Image' }}">
+        <div class="details">
             <h3>{{ item.item_name or 'Unnamed Item' }}</h3>
             <p>Code: {{ item.item_code }}</p>
             <p>Group: {{ item.item_group }}</p>
             <p>Stock: {{ item.available_qty or 0 }} {{ item.stock_uom or '' }}</p>
-            <p class="price">Price: {{ item.selling_price or 0 }}</p>
         </div>
-        {% endfor %}
+        <div class="price">₹ {{ item.selling_price or 0 }}</div>
     </div>
+
+    {% if loop.last %}
+        <!-- Page number for last page -->
+        <div class="page-number">Page {{ ((loop.index0 // 4) + 1) }}</div>
+    {% endif %}
+
+{% endfor %}
 
 </body>
 </html>
