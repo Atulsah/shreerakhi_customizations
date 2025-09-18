@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Customer Item Catalogue</title>
+    <style>
+        body {
+            font-family: "Helvetica", Arial, sans-serif;
+            margin: 20px;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header img {
+            max-height: 80px;
+        }
+        .header h1 {
+            margin: 10px 0 5px 0;
+            font-size: 28px;
+        }
+        .header p {
+            font-size: 14px;
+            color: #666;
+        }
+        .grid-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 15px;
+        }
+        .item-card {
+            width: 200px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+        .item-card img {
+            width: 180px;
+            height: 180px;
+            object-fit: contain;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .item-card h3 {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        .item-card p {
+            font-size: 12px;
+            margin: 2px 0;
+            color: #555;
+        }
+        .price {
+            font-weight: bold;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <img src="{{ base_url }}/assets/shreerakhi_customizations/images/logo.png" alt="Company Logo">
+        <h1>Customer Item Catalogue</h1>
+        <p>Price List: {{ price_list or 'Standard Selling' }}</p>
+    </div>
+
+    {% set placeholder = base_url ~ "/assets/shreerakhi_customizations/images/placeholder.png" %}
+
+    <!-- Items Grid -->
+    <div class="grid-container">
+        {% for item in items %}
+        <div class="item-card">
+            <img src="{{ (item.image and (base_url ~ item.image)) or placeholder }}"
+                 alt="{{ item.item_name or 'No Image' }}">
+            <h3>{{ item.item_name or 'Unnamed Item' }}</h3>
+            <p>Code: {{ item.item_code }}</p>
+            <p>Group: {{ item.item_group }}</p>
+            <p>Stock: {{ item.available_qty or 0 }} {{ item.stock_uom or '' }}</p>
+            <p class="price">Price: {{ item.selling_price or 0 }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
