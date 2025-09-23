@@ -1,6 +1,7 @@
 import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
+from frappe import _
 
 class ShreePackingList(Document):
     def on_submit(self):
@@ -95,3 +96,32 @@ class ShreePackingList(Document):
             f'Sales Invoice <a href="{link}"><b>{invoice.name}</b></a> has been created and linked to this Packing List.',
             alert=True
         )
+
+    # -----------------------
+    # Barcode Scanner API
+    # -----------------------
+    @frappe.whitelist()
+    def add_box_item_by_barcode(packing_list_name, barcode, box_no=None):
+        try:
+            # Item find karo barcode se
+            item_code = frappe.db.get_value("Item", {"barcode": barcode}, "name")
+            if not item_code:
+                return {"status": "error", "message": f"Item not found for barcode {barcode}"}
+
+            # Packing List child table me add karo
+            pl = frappe.get_doc("Shree Packing List", packing_list_name)
+
+            pl.append("items", {
+                "item_code": item_code,
+                "box_no": box_no or 1,   # default box 1 if not provided
+                "qty": 1
+            })
+
+            pl.save(ignore_permissions=True)
+            frappe.db.commit()
+
+            return {"status": "success", "message": f"Item {item_code} added to Box {box_no}"}
+
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "Add Box Item By Barcode Failed")
+            return {"status": "error", "message": str(e)}

@@ -79,9 +79,13 @@
         <img src="{{ (item.image and item.image) or placeholder }}" alt="{{ item.item_name or 'No Image' }}">
         <div class="details">
             <h3>{{ item.item_name or 'Unnamed Item' }}</h3>
-            <p>Code: {{ item.item_code }}</p>
-            <p>Group: {{ item.item_group }}</p>
-            <p>Stock: {{ item.available_qty or 0 }} {{ item.stock_uom or '' }}</p>
+            <p><strong>Code:</strong> {{ item.item_code }}</p>
+            <p><strong>Group:</strong> {{ item.item_group }}</p>
+            <p><strong>Range:</strong> {{ item.item_range or '-' }}</p>
+            <p><strong>Range Name:</strong> {{ item.item_range_name or '-' }}</p>
+            <p><strong>Box Type:</strong> {{ item.box_type or '-' }}</p>
+            <p><strong>Category:</strong> {{ item.item_category or '-' }}</p>
+            <p><strong>Stock:</strong> {{ item.available_qty or 0 }} {{ item.stock_uom or '' }}</p>
         </div>
         <div class="price">₹ {{ item.selling_price or 0 }}</div>
     </div>
