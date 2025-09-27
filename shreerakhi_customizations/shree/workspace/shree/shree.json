@@ -1,0 +1,150 @@
+{
+ "charts": [],
+ "content": "[{\"type\": \"header\", \"data\": {\"text\": \"Shree Dashboard\", \"level\": 1}}, {\"type\": \"number_card\", \"data\": {\"label\": \"Shree Temp Range\", \"doctype\": \"Shree Temp Range\", \"value\": null}}, {\"type\": \"number_card\", \"data\": {\"label\": \"Item Range\", \"doctype\": \"Item Range\", \"value\": null}}, {\"type\": \"number_card\", \"data\": {\"label\": \"Factory Location\", \"doctype\": \"Factory Location\", \"value\": null}}, {\"type\": \"number_card\", \"data\": {\"label\": \"Item Category\", \"doctype\": \"Item Category\", \"value\": null}}, {\"type\": \"number_card\", \"data\": {\"label\": \"Shree Packing List\", \"doctype\": \"Shree Packing List\", \"value\": null}}, {\"type\": \"html\", \"data\": \"\\n        <div style=\\\"padding:10px;\\\">\\n            <h2>Masters</h2>\\n            <div><a href='/app/shree-temp-range'>Shree Temp Range</a></div>\\n            <div><a href='/app/item-range'>Item Range</a></div>\\n            <div><a href='/app/factory-location'>Factory Location</a></div>\\n            <div><a href='/app/item-category'>Item Category</a></div>\\n\\n            <h2>Documents</h2>\\n            <div><a href='/app/shree-packing-list'>Shree Packing List</a></div>\\n\\n            <h2>Reports</h2>\\n            <div><a href='/app/customer-item-catalogue'>Customer Item Catalogue</a></div>\\n        </div>\\n    \"}]",
+ "creation": "2025-09-25 16:53:59.867461",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "retail",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Shree",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Shree Temp Range",
+   "link_count": 0,
+   "link_to": "Shree Temp Range",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item Range",
+   "link_count": 0,
+   "link_to": "Item Range",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Factory Location",
+   "link_count": 0,
+   "link_to": "Factory Location",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item Category",
+   "link_count": 0,
+   "link_to": "Item Category",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Documents",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Shree Packing List",
+   "link_count": 0,
+   "link_to": "Shree Packing List",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Customer Item Catalogue",
+   "link_count": 0,
+   "link_to": "Customer Item Catalogue",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Item",
+   "type": "Link"
+  }
+ ],
+ "modified": "2025-09-25 17:46:08.811500",
+ "modified_by": "Administrator",
+ "module": "Shree",
+ "name": "Shree",
+ "number_cards": [],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 28.0,
+ "shortcuts": [
+  {
+   "doc_view": "",
+   "label": "Shree Packing List",
+   "link_to": "Shree Packing List",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Shree Temp Range",
+   "link_to": "Shree Temp Range",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Factory Location",
+   "link_to": "Factory Location",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Item Category",
+   "link_to": "Item Category",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Item Range",
+   "link_to": "Item Range",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Customer Item Catalogue",
+   "link_to": "Customer Item Catalogue",
+   "report_ref_doctype": "Item",
+   "type": "Report"
+  }
+ ],
+ "title": "Shree"
+}
