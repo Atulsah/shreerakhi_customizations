@@ -13,7 +13,8 @@
   "item_code",
   "item_name",
   "qty",
-  "uom"
+  "uom",
+  "pending_qty"
  ],
  "fields": [
   {
@@ -57,6 +58,7 @@
   },
   {
    "columns": 1,
+   "fetch_from": "item_code.sales_uom",
    "fieldname": "uom",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -69,13 +71,19 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Quantity"
+  },
+  {
+   "fieldname": "pending_qty",
+   "fieldtype": "Float",
+   "label": "Pending Qty",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-09-19 17:13:41.310087",
+ "modified": "2025-10-03 17:40:43.622952",
  "modified_by": "Administrator",
  "module": "Shree",
  "name": "Shree Packing Boxes",
