@@ -1,0 +1,237 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2025-10-07 11:02:30.446127",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_zt5q",
+  "amended_from",
+  "naming_series",
+  "date",
+  "source_warehouse",
+  "column_break_jknz",
+  "customer",
+  "section_break_qhwk",
+  "items",
+  "section_break_la0c",
+  "total_ordered_qty",
+  "section_break_gm4l",
+  "first_order_amount",
+  "second_order_amount",
+  "third_order_amount",
+  "fourth_order_amount",
+  "fifth_order_amount",
+  "sixth_order_amount",
+  "column_break_r6ts",
+  "first_order_quantity",
+  "second_order_quantity",
+  "third_order_quantity",
+  "fourth_order_quantity",
+  "fifth_order_quantity",
+  "sixth_order_quantity"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_zt5q",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Sales Session",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "\nSS-.YYYY.-.#####"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "source_warehouse",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Source Warehouse",
+   "options": "Warehouse",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_jknz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Table",
+   "label": "Customer",
+   "options": "Sales Session Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_qhwk",
+   "fieldtype": "Section Break"
+  },
+  {
+   "allow_bulk_edit": 1,
+   "depends_on": "eval:!doc.__islocal",
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "Sales Session Item"
+  },
+  {
+   "fieldname": "section_break_la0c",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "total_ordered_qty",
+   "fieldtype": "Data",
+   "label": "Total Ordered Qty",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_gm4l",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "first_order_amount",
+   "fieldtype": "Currency",
+   "label": "First Order Amount"
+  },
+  {
+   "fieldname": "second_order_amount",
+   "fieldtype": "Currency",
+   "label": "Second Order Amount"
+  },
+  {
+   "fieldname": "third_order_amount",
+   "fieldtype": "Currency",
+   "label": "Third Order Amount"
+  },
+  {
+   "fieldname": "fourth_order_amount",
+   "fieldtype": "Currency",
+   "label": "Fourth Order Amount"
+  },
+  {
+   "fieldname": "fifth_order_amount",
+   "fieldtype": "Currency",
+   "label": "Fifth Order Amount"
+  },
+  {
+   "fieldname": "sixth_order_amount",
+   "fieldtype": "Currency",
+   "label": "Sixth Order Amount"
+  },
+  {
+   "fieldname": "column_break_r6ts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "first_order_quantity",
+   "fieldtype": "Float",
+   "label": "First Order Quantity"
+  },
+  {
+   "fieldname": "second_order_quantity",
+   "fieldtype": "Float",
+   "label": "Second Order Quantity"
+  },
+  {
+   "fieldname": "third_order_quantity",
+   "fieldtype": "Float",
+   "label": "Third Order Quantity"
+  },
+  {
+   "fieldname": "fourth_order_quantity",
+   "fieldtype": "Float",
+   "label": "Fourth Order Quantity"
+  },
+  {
+   "fieldname": "fifth_order_quantity",
+   "fieldtype": "Float",
+   "label": "Fifth Order Quantity"
+  },
+  {
+   "fieldname": "sixth_order_quantity",
+   "fieldtype": "Float",
+   "label": "Sixth Order Quantity"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-10-07 11:02:30.446127",
+ "modified_by": "Administrator",
+ "module": "Shree",
+ "name": "Sales Session",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Master Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

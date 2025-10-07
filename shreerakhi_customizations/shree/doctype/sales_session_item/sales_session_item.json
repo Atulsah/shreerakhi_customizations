@@ -1,0 +1,191 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-07 11:12:28.744120",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_code",
+  "item_name",
+  "item_range",
+  "uom",
+  "conversion_factor",
+  "column_break_z0zu",
+  "actual_qty",
+  "ordered_qty",
+  "rate",
+  "stock_uom",
+  "stock_uom_rate",
+  "section_break_ss4t",
+  "first_order_qty",
+  "second_order_qty",
+  "third_order_qty",
+  "fourth_order_qty",
+  "fifth_order_qty",
+  "sixth_order_qty",
+  "column_break_c1mk",
+  "first_order_amount",
+  "second_order_amount",
+  "third_order_amount",
+  "fourth_order_amount",
+  "fifth_order_amount",
+  "sixth_order_amount"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item Code",
+   "options": "Item"
+  },
+  {
+   "fetch_from": "item_code.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "label": "Item Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "item_range",
+   "fieldtype": "Link",
+   "label": "Item Range",
+   "options": "Item Range"
+  },
+  {
+   "fetch_from": "item_code.sales_uom",
+   "fieldname": "uom",
+   "fieldtype": "Link",
+   "label": "UOM",
+   "options": "UOM"
+  },
+  {
+   "fieldname": "conversion_factor",
+   "fieldtype": "Float",
+   "label": "UOM Conversion Factor"
+  },
+  {
+   "fieldname": "column_break_z0zu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "actual_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Actual Qty"
+  },
+  {
+   "fieldname": "ordered_qty",
+   "fieldtype": "Float",
+   "label": "Ordered Qty"
+  },
+  {
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "UOM Rate"
+  },
+  {
+   "fieldname": "stock_uom",
+   "fieldtype": "Link",
+   "label": "Stock UOM",
+   "options": "UOM"
+  },
+  {
+   "fieldname": "stock_uom_rate",
+   "fieldtype": "Currency",
+   "label": "Stock UOM Rate"
+  },
+  {
+   "fieldname": "section_break_ss4t",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "first_order_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "First Qty"
+  },
+  {
+   "fieldname": "second_order_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Second Qty"
+  },
+  {
+   "fieldname": "third_order_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Third Qty"
+  },
+  {
+   "fieldname": "fourth_order_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Fourth Qty"
+  },
+  {
+   "columns": 1,
+   "fieldname": "fifth_order_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Fifth Qty"
+  },
+  {
+   "columns": 1,
+   "fieldname": "sixth_order_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Sixth Qty"
+  },
+  {
+   "fieldname": "column_break_c1mk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "first_order_amount",
+   "fieldtype": "Currency",
+   "label": "First Order Amount"
+  },
+  {
+   "fieldname": "second_order_amount",
+   "fieldtype": "Currency",
+   "label": "Second Order Amount"
+  },
+  {
+   "fieldname": "third_order_amount",
+   "fieldtype": "Currency",
+   "label": "Third Order Amount"
+  },
+  {
+   "fieldname": "fourth_order_amount",
+   "fieldtype": "Currency",
+   "label": "Fourth Order Amount"
+  },
+  {
+   "fieldname": "fifth_order_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Fifth Order Amount"
+  },
+  {
+   "fieldname": "sixth_order_amount",
+   "fieldtype": "Currency",
+   "label": "Sixth Order Amount"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-10-07 11:49:05.188508",
+ "modified_by": "Administrator",
+ "module": "Shree",
+ "name": "Sales Session Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
