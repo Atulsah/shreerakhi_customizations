@@ -6,16 +6,24 @@ from frappe.utils import flt, nowdate
 
 CACHE_KEY = "sales_order_allocations"  # cache allocations for 10 minutes
 
-
 def execute(filters=None):
     filters = filters or {}
     warehouse = filters.get("warehouse")
-    customer = filters.get("customer")
+    customer_filter = filters.get("customer")  # Can be multiple customers
     status = filters.get("status")
 
     filters_dict = {"status": ["!=", "Cancelled"]}
-    if customer:
-        filters_dict["customer"] = customer
+
+    # Handle multiple customers (comma-separated)
+    customer_list = []
+    if customer_filter:
+        if isinstance(customer_filter, list):
+            customer_list = customer_filter
+        else:
+            customer_list = [c.strip() for c in customer_filter.split(",") if c.strip()]
+        if customer_list:
+            filters_dict["customer"] = ["in", customer_list]
+
     if status:
         filters_dict["status"] = status
 
@@ -28,7 +36,6 @@ def execute(filters=None):
         {"label": "% Delivered", "fieldname": "percent_delivered", "fieldtype": "Percent", "width": 120},
         {"label": "% Ready to Dispatch", "fieldname": "percent_ready", "fieldtype": "Percent", "width": 160},
         {"label": "Qty Ready to Dispatch", "fieldname": "qty_ready_to_dispatch", "fieldtype": "Float", "width": 160},
-        {"label": "Color", "fieldname": "color", "fieldtype": "Data", "width": 100},
         {"label": "Create Invoice", "fieldname": "invoice_button", "fieldtype": "Button", "width": 150},
     ]
 
@@ -89,16 +96,6 @@ def execute(filters=None):
         percent_delivered = round((delivered_qty / total_qty) * 100, 2) if total_qty else 0
         percent_ready = round((ready_qty / total_qty) * 100, 2) if total_qty else 0
 
-        # Color logic
-        if percent_delivered >= 100:
-            color_label = "Green"
-            percent_ready = 0
-            ready_qty = 0
-        elif percent_ready > 0:
-            color_label = "Orange"
-        else:
-            color_label = "Red"
-
         # Customer address
         city = ""
         pincode = ""
@@ -121,7 +118,6 @@ def execute(filters=None):
                 "percent_delivered": percent_delivered,
                 "percent_ready": percent_ready,
                 "qty_ready_to_dispatch": ready_qty,
-                "color": color_label,
                 "invoice_button": "Create Invoice",
             }
         )

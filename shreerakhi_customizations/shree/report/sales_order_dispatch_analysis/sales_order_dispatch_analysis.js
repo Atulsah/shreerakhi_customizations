@@ -13,8 +13,11 @@ frappe.query_reports["Sales Order Dispatch Analysis"] = {
         {
             fieldname: "customer",
             label: __("Customer"),
-            fieldtype: "Link",
-            options: "Customer"
+            fieldtype: "MultiSelectList",
+            options: "Customer",
+            get_data: function(txt) {
+                return frappe.db.get_link_options("Customer", txt);
+            }
         },
         {
             fieldname: "status",
@@ -24,7 +27,7 @@ frappe.query_reports["Sales Order Dispatch Analysis"] = {
         },
     ],
 
-    onload: function(report) {
+   /* onload: function(report) {
         // Add Color Legend Bar
         if (!report.page.wrapper.find(".color-legend").length) {
             const legend_html = `
@@ -47,7 +50,7 @@ frappe.query_reports["Sales Order Dispatch Analysis"] = {
             `;
             $(legend_html).insertBefore(report.page.wrapper.find(".frappe-control[data-fieldname='warehouse']"));
         }
-    },
+    },*/
 
     formatter: function(value, row, column, data, default_formatter) {
         value = default_formatter(value, row, column, data);
