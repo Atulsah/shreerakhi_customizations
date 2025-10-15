@@ -111,7 +111,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-10-07 15:47:35.162572",
+ "modified": "2025-10-15 13:14:08.356021",
  "modified_by": "Administrator",
  "module": "Shree",
  "name": "Shree Packing List",
@@ -155,6 +155,7 @@
    "read": 1,
    "report": 1,
    "role": "Sales User",
+   "select": 1,
    "share": 1,
    "submit": 1,
    "write": 1
@@ -168,6 +169,7 @@
    "read": 1,
    "report": 1,
    "role": "Sales Manager",
+   "select": 1,
    "share": 1,
    "submit": 1,
    "write": 1
@@ -181,6 +183,7 @@
    "read": 1,
    "report": 1,
    "role": "Sales Master Manager",
+   "select": 1,
    "share": 1,
    "submit": 1,
    "write": 1

@@ -87,6 +87,7 @@
    "label": "UOM Rate"
   },
   {
+   "fetch_from": "item_code.stock_uom",
    "fieldname": "stock_uom",
    "fieldtype": "Link",
    "label": "Stock UOM",
@@ -178,7 +179,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-10-07 11:49:05.188508",
+ "modified": "2025-10-15 16:11:02.129619",
  "modified_by": "Administrator",
  "module": "Shree",
  "name": "Sales Session Item",
