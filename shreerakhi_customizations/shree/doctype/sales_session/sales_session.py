@@ -23,16 +23,7 @@ def get_qty(item_code, warehouse):
 			LIMIT 1;
 			""",as_dict=1)
 	return qty
-'''
-@frappe.whitelist()
-def get_qty(item_code):
-	qty = frappe.db.sql(f"""SELECT qty_after_transaction as qty
-			FROM `tabStock Ledger Entry` Where item_code = '{item_code}' and is_cancelled = 0
-			ORDER BY creation DESC
-			LIMIT 1;
-			""",as_dict=1)
-	return qty
-'''
+
 @frappe.whitelist()
 def get_uom(item_code):
 	uom = frappe.db.sql(f""" select uom,conversion_factor from `tabUOM Conversion Detail`
