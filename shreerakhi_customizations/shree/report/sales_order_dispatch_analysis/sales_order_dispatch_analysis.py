@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.utils import flt, nowdate
+from frappe.utils import flt, nowdate, getdate
 
 CACHE_KEY = "sales_order_allocations"  # cache allocations for 10 minutes
 
@@ -131,12 +131,24 @@ def create_sales_invoice(sales_order, warehouse=None):
     allocations = frappe.cache().get_value(CACHE_KEY) or {}
     so_alloc = allocations.get(sales_order, {})
 
+    if not so_alloc:
+        frappe.throw(f"No stock allocated for Sales Order {sales_order}")
+
     so_doc = frappe.get_doc("Sales Order", sales_order)
     inv = frappe.new_doc("Sales Invoice")
     inv.customer = so_doc.customer
-    inv.due_date = so_doc.transaction_date
-    inv.posting_date = nowdate()
     inv.sales_order = so_doc.name
+    inv.posting_date = nowdate()
+
+    # --- Updated: ensure due_date >= posting_date ---
+    so_date = getdate(so_doc.transaction_date)
+    posting_date = getdate(inv.posting_date)
+    if so_doc.payment_terms_template:
+        inv.payment_terms_template = so_doc.payment_terms_template
+        inv.due_date = so_doc.get_payment_due_date() or posting_date
+    else:
+        inv.due_date = max(so_date, posting_date)
+    # ----------------------------------------------
 
     for item in so_doc.items:
         alloc_qty = flt(so_alloc.get(item.item_code, 0))
@@ -168,7 +180,11 @@ def create_sales_invoice(sales_order, warehouse=None):
 def bulk_create_invoices(sales_orders, warehouse=None):
     import json
 
-    so_list = json.loads(sales_orders)
+    try:
+        so_list = json.loads(sales_orders)
+    except Exception:
+        frappe.throw("Invalid JSON format for sales_orders")
+
     allocations = frappe.cache().get_value(CACHE_KEY) or {}
     created = []
 
@@ -181,9 +197,18 @@ def bulk_create_invoices(sales_orders, warehouse=None):
             so_doc = frappe.get_doc("Sales Order", so_name)
             inv = frappe.new_doc("Sales Invoice")
             inv.customer = so_doc.customer
-            inv.due_date = so_doc.transaction_date
-            inv.posting_date = nowdate()
             inv.sales_order = so_doc.name
+            inv.posting_date = nowdate()
+
+            # --- Updated: ensure due_date >= posting_date ---
+            so_date = getdate(so_doc.transaction_date)
+            posting_date = getdate(inv.posting_date)
+            if so_doc.payment_terms_template:
+                inv.payment_terms_template = so_doc.payment_terms_template
+                inv.due_date = so_doc.get_payment_due_date() or posting_date
+            else:
+                inv.due_date = max(so_date, posting_date)
+            # ----------------------------------------------
 
             for item in so_doc.items:
                 alloc_qty = flt(so_alloc.get(item.item_code, 0))
