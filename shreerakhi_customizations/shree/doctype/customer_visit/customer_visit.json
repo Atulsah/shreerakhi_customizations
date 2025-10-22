@@ -1,0 +1,151 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-16 14:54:30.808336",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "year",
+  "customer_type",
+  "state",
+  "city",
+  "customer",
+  "customer_details",
+  "edit_customer_button",
+  "create_new_customer_button",
+  "amended_from",
+  "column_break_avtj",
+  "visit_date",
+  "d_day",
+  "customer_visit_id",
+  "days_before_d_day",
+  "address_html"
+ ],
+ "fields": [
+  {
+   "fieldname": "customer_visit_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Visit ID"
+  },
+  {
+   "fieldname": "year",
+   "fieldtype": "Link",
+   "label": "Year",
+   "options": "D Day"
+  },
+  {
+   "default": "Today",
+   "fieldname": "visit_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date of Visit",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "year.d_day_date",
+   "fieldname": "d_day",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "D Day",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "days_before_d_day",
+   "fieldtype": "Int",
+   "label": "Days Before D Day",
+   "read_only": 1
+  },
+  {
+   "fieldname": "state",
+   "fieldtype": "Select",
+   "label": "State",
+   "options": "\nAndaman and Nicobar Islands\nAndhra Pradesh\nArunachal Pradesh\nAssam\nBihar\nChandigarh\nChhattisgarh\nDadra and Nagar Haveli and Daman and Diu\nDelhi\nGoa\nGujarat\nHaryana\nHimachal Pradesh\nJammu and Kashmir\nJharkhand\nKarnataka\nKerala\nLadakh\nLakshadweep\nMadhya Pradesh\nMaharashtra\nManipur\nMeghalaya\nMizoram\nNagaland\nOdisha\nPuducherry\nPunjab\nRajasthan\nSikkim\nTamil Nadu\nTelangana\nTripura\nUttar Pradesh\nUttarakhand\nWest Bengal",
+   "reqd": 1
+  },
+  {
+   "fieldname": "city",
+   "fieldtype": "Data",
+   "label": "City"
+  },
+  {
+   "fieldname": "customer_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Customer Type",
+   "options": "Old Customer\nNew Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "customer_details",
+   "fieldtype": "HTML",
+   "label": "Customer Details"
+  },
+  {
+   "fieldname": "edit_customer_button",
+   "fieldtype": "Button",
+   "label": "Edit Customer"
+  },
+  {
+   "fieldname": "create_new_customer_button",
+   "fieldtype": "Button",
+   "label": "Create New Customer"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Customer Visit",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_avtj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "address_html",
+   "fieldtype": "HTML",
+   "label": "Address HTML"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-10-18 13:10:05.956872",
+ "modified_by": "Administrator",
+ "module": "Shree",
+ "name": "Customer Visit",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "customer_visit_id"
+}
