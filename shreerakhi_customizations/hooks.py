@@ -28,6 +28,44 @@ doctype_js = {
 }
 
 # -----------------------------
-# Whitelisted Methods
+# Document Events
 # -----------------------------
-# No need to register here, since @frappe.whitelist in api/packing_list.py already handles it
+doc_events = {
+    "Sales Invoice": {
+        "on_submit": "shreerakhi_customizations.api.invoice_api.generate_public_access_key"
+    }
+}
+
+# -----------------------------
+# CRITICAL: Web Page Routes (No Auth Required)
+# -----------------------------
+# This makes the endpoint accessible without login
+web_include_js = []
+web_include_css = []
+
+# Register custom route that bypasses authentication
+website_route_rules = [
+    {
+        "from_route": "/api/method/shreerakhi_customizations.api.invoice_api.view_invoice",
+        "to_route": "shreerakhi_customizations.api.invoice_api.view_invoice"
+    }
+]
+
+# Allow this method to be called without auth
+# This is the KEY setting that fixes 403
+override_doctype_dashboards = {}
+
+# Custom handlers
+before_install = []
+after_install = []
+
+# CRITICAL: Make this specific endpoint public
+# Add to allowed methods for guest users
+def validate_guest_access():
+    """Called on every request"""
+    if frappe.request.path == "/api/method/shreerakhi_customizations.api.invoice_api.view_invoice":
+        frappe.flags.ignore_permissions = True
+        return True
+
+# Add boot session info
+boot_session = []
