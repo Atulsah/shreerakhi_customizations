@@ -126,7 +126,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Documents",
-   "link_count": 3,
+   "link_count": 4,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -160,9 +160,19 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Upload PDF for Invoice",
+   "link_count": 0,
+   "link_to": "Invoice PDF Upload",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2025-10-18 13:31:48.389040",
+ "modified": "2025-11-07 10:40:56.464938",
  "modified_by": "Administrator",
  "module": "Shree",
  "name": "Shree",

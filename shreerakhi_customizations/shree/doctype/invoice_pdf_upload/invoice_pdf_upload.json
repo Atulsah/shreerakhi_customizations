@@ -1,0 +1,150 @@
+{
+ "actions": [],
+ "creation": "2024-11-05 13:22:05.933833",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "pdf_section",
+  "pdf_file",
+  "column_break_1",
+  "auto_create_invoice",
+  "auto_submit",
+  "multipage_section",
+  "is_multipage",
+  "page_count",
+  "remove_subtotals",
+  "merge_split_items",
+  "section_break_2",
+  "extracted_data",
+  "section_break_3",
+  "sales_invoice",
+  "invoice_status",
+  "error_log"
+ ],
+ "fields": [
+  {
+   "fieldname": "pdf_section",
+   "fieldtype": "Section Break",
+   "label": "PDF Upload"
+  },
+  {
+   "fieldname": "pdf_file",
+   "fieldtype": "Attach",
+   "label": "Upload Invoice PDF",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "auto_create_invoice",
+   "fieldtype": "Check",
+   "label": "Auto Create Invoice"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_submit",
+   "fieldtype": "Check",
+   "label": "Auto Submit Invoice"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "multipage_section",
+   "fieldtype": "Section Break",
+   "label": "Multipage Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_multipage",
+   "fieldtype": "Check",
+   "label": "Multipage Invoice"
+  },
+  {
+   "depends_on": "is_multipage",
+   "fieldname": "page_count",
+   "fieldtype": "Int",
+   "label": "Expected Page Count",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "depends_on": "is_multipage",
+   "fieldname": "remove_subtotals",
+   "fieldtype": "Check",
+   "label": "Remove Subtotal Rows"
+  },
+  {
+   "default": "0",
+   "depends_on": "is_multipage",
+   "fieldname": "merge_split_items",
+   "fieldtype": "Check",
+   "label": "Merge Split Items"
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break",
+   "label": "Extracted Data"
+  },
+  {
+   "fieldname": "extracted_data",
+   "fieldtype": "Code",
+   "label": "Extracted JSON Data",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Invoice Details"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pending\nProcessed\nFailed"
+  },
+  {
+   "fieldname": "error_log",
+   "fieldtype": "Text",
+   "label": "Error Log",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-11-05 13:23:24.475327",
+ "modified_by": "Administrator",
+ "module": "Shree",
+ "name": "Invoice PDF Upload",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
