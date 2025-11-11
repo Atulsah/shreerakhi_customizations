@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "autoname": "format:INV-{YY}-{MM}-{#####}",
  "creation": "2024-11-05 13:22:05.933833",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -10,6 +11,8 @@
   "column_break_1",
   "auto_create_invoice",
   "auto_submit",
+  "delete_pdf_after_processing",
+  "detected_invoice_type",
   "multipage_section",
   "is_multipage",
   "page_count",
@@ -31,8 +34,7 @@
   {
    "fieldname": "pdf_file",
    "fieldtype": "Attach",
-   "label": "Upload Invoice PDF",
-   "reqd": 1
+   "label": "Upload Invoice PDF"
   },
   {
    "fieldname": "column_break_1",
@@ -49,6 +51,20 @@
    "fieldname": "auto_submit",
    "fieldtype": "Check",
    "label": "Auto Submit Invoice"
+  },
+  {
+   "default": "1",
+   "fieldname": "delete_pdf_after_processing",
+   "fieldtype": "Check",
+   "label": "Delete PDF After Processing",
+   "description": "Save storage space by deleting PDF after successful extraction"
+  },
+  {
+   "fieldname": "detected_invoice_type",
+   "fieldtype": "Select",
+   "label": "Detected Invoice Type",
+   "options": "Normal Invoice\nBill of Supply",
+   "read_only": 1
   },
   {
    "collapsible": 1,
@@ -108,6 +124,7 @@
    "read_only": 1
   },
   {
+   "default": "Pending",
    "fieldname": "invoice_status",
    "fieldtype": "Select",
    "label": "Status",
@@ -123,7 +140,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-05 13:23:24.475327",
+ "modified": "2025-11-10 15:30:00.000000",
  "modified_by": "Administrator",
  "module": "Shree",
  "name": "Invoice PDF Upload",
@@ -140,11 +157,35 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

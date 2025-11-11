@@ -11,14 +11,26 @@ import os
 
 class InvoicePDFUpload(Document):
     def validate(self):
+        # Validate PDF is present for new documents or if not yet processed
+        if self.is_new() and not self.pdf_file:
+            frappe.throw("Please upload a PDF file")
+        
+        # Only process if PDF exists and invoice not yet created
         if self.pdf_file and not self.sales_invoice and self.auto_create_invoice:
             self.extract_and_create_invoice()
     
     def extract_and_create_invoice(self):
         """PDF se data extract karke Sales Invoice create karta hai"""
+        file_name = None
+        file_path = None
+        
         try:
             # PDF file read karna
             file_doc = frappe.get_doc("File", {"file_url": self.pdf_file})
+            
+            # Store file info for later deletion (but don't delete yet!)
+            file_path = file_doc.get_full_path()
+            file_name = file_doc.name
             
             # API se data extract karna
             extracted_data = self.extract_pdf_using_api(file_doc)
@@ -37,6 +49,8 @@ class InvoicePDFUpload(Document):
                 invoice = self.create_sales_invoice(extracted_data)
                 self.sales_invoice = invoice.name
                 self.invoice_status = "Processed"
+                
+                # Note: PDF will be deleted in on_update hook AFTER save
                 frappe.msgprint(f"Sales Invoice {invoice.name} successfully created!")
             else:
                 self.invoice_status = "Failed"
@@ -44,8 +58,52 @@ class InvoicePDFUpload(Document):
             
         except Exception as e:
             self.invoice_status = "Failed"
+            self.error_log = str(e)
             frappe.log_error(f"Error in PDF extraction: {str(e)}", "Invoice PDF Upload Error")
             frappe.throw(f"PDF extraction failed: {str(e)}")
+    
+    def on_update(self):
+        """Called after document is saved - safe to delete PDF here"""
+        # Only delete if processing was successful and option is enabled
+        if (self.invoice_status == "Processed" and 
+            self.delete_pdf_after_processing and 
+            self.pdf_file):
+            
+            try:
+                # Get file info
+                file_doc = frappe.get_doc("File", {"file_url": self.pdf_file})
+                file_path = file_doc.get_full_path()
+                file_name = file_doc.name
+                
+                # Delete PDF file
+                self.delete_pdf_file(file_name, file_path)
+                
+                frappe.msgprint("PDF deleted to save storage space.", indicator="blue")
+                
+            except Exception as e:
+                frappe.log_error(f"Error deleting PDF in on_update: {str(e)}", "PDF Deletion Error")
+                # Don't throw - document is already saved
+    
+    def delete_pdf_file(self, file_name, file_path):
+        """Delete PDF file after successful extraction to save space"""
+        try:
+            # Delete file from database
+            if frappe.db.exists("File", file_name):
+                frappe.delete_doc("File", file_name, ignore_permissions=True, force=True)
+                frappe.logger().info(f"Deleted File record: {file_name}")
+            
+            # Delete physical file from server
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                frappe.logger().info(f"Deleted physical file: {file_path}")
+            
+            # Update current document to clear pdf_file reference
+            frappe.db.set_value("Invoice PDF Upload", self.name, "pdf_file", None, update_modified=False)
+            frappe.db.commit()
+            
+        except Exception as e:
+            frappe.log_error(f"Error deleting PDF file: {str(e)}", "PDF Deletion Error")
+            # Don't throw error - extraction was successful, deletion is optional
     
     def extract_pdf_using_api(self, file_doc):
         """External API use karke PDF se data extract karna"""
@@ -694,37 +752,6 @@ class InvoicePDFUpload(Document):
                 frappe.db.commit()
                 invoice.reload()
             
-            # CRITICAL: Force discount using SQL if needed
-            needs_discount_update = False
-            
-            if discount_percent > 0:
-                current_discount = invoice.additional_discount_percentage or 0
-                if abs(current_discount - discount_percent) > 0.01:
-                    needs_discount_update = True
-                    frappe.db.sql("""
-                        UPDATE `tabSales Invoice`
-                        SET 
-                            additional_discount_percentage = %s,
-                            apply_discount_on = 'Grand Total'
-                        WHERE name = %s
-                    """, (float(discount_percent), invoice.name))
-                    frappe.logger().info(f"Force updated discount: {discount_percent}%")
-                    
-            elif discount_amount > 0:
-                current_discount_amt = invoice.discount_amount or 0
-                if abs(current_discount_amt - discount_amount) > 0.01:
-                    needs_discount_update = True
-                    frappe.db.sql("""
-                        UPDATE `tabSales Invoice`
-                        SET discount_amount = %s
-                        WHERE name = %s
-                    """, (float(discount_amount), invoice.name))
-                    frappe.logger().info(f"Force updated discount amount: ₹{discount_amount}")
-            
-            if needs_discount_update:
-                frappe.db.commit()
-                invoice.reload()
-            
             # Verify totals
             total_calculated = sum(row.amount for row in invoice.items)
             pdf_total = extracted_data.get("total_amount", 0)
@@ -806,3 +833,20 @@ class InvoicePDFUpload(Document):
             "message": "❌ API key verification failed",
             "suggestion": "Generate new key at: https://makersuite.google.com/app/apikey"
         }
+
+
+# Helper function to debug discount issues
+@frappe.whitelist()
+def debug_invoice_discount(invoice_name):
+    """Debug helper to check discount values"""
+    invoice = frappe.get_doc("Sales Invoice", invoice_name)
+    
+    return {
+        "invoice_name": invoice_name,
+        "additional_discount_percentage": invoice.additional_discount_percentage,
+        "discount_amount": invoice.discount_amount,
+        "apply_discount_on": invoice.apply_discount_on,
+        "total": invoice.total,
+        "grand_total": invoice.grand_total,
+        "discount_calculated": invoice.total - invoice.grand_total if invoice.total > invoice.grand_total else 0
+    }
