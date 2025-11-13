@@ -165,15 +165,17 @@ class InvoicePDFUpload(Document):
             Look for table with columns: SL.NO, ITEM NO, BOX, PACKING, UNIT, QUANTITY, RATE, AMOUNT
             
             Extract these EXACT values for each item:
-            1. item_code: From ITEM NO column
-            2. qty: From BOX column (number of boxes sold)
-            3. conversion_factor: From PACKING column (items per box)
-            4. stock_uom: From UNIT column (e.g., PCS, DOZ, KG)
-            5. stock_qty: From QUANTITY column (should equal BOX × PACKING)
-            6. stock_rate: From RATE column (rate per stock UOM, NOT box rate)
-            7. amount: From AMOUNT column (total amount)
+            1. invoice_number: Invoice number from PDF (look for "Invoice No", "Bill No", "Document No", etc.)
+            2. item_code: From ITEM NO column
+            3. qty: From BOX column (number of boxes sold)
+            4. conversion_factor: From PACKING column (items per box)
+            5. stock_uom: From UNIT column (e.g., PCS, DOZ, KG)
+            6. stock_qty: From QUANTITY column (should equal BOX × PACKING)
+            7. stock_rate: From RATE column (rate per stock UOM, NOT box rate)
+            8. amount: From AMOUNT column (total amount)
             
             CRITICAL FOR BILL OF SUPPLY:
+            - "invoice_number" = Extract from PDF header (Invoice No, Bill No, Doc No, etc.)
             - "qty" = BOX value (sales quantity in boxes)
             - "conversion_factor" = PACKING value
             - "stock_uom" = UNIT value (PCS, DOZ, KG, etc.)
@@ -183,10 +185,12 @@ class InvoicePDFUpload(Document):
             - DO NOT calculate box_rate - we will do it later
             
             Example Bill of Supply row:
+            Invoice No: INV-2024-001
             | 1 | ITEM001 | 10 | 12 | PCS | 120 | 50 | 6000 |
             
             Should extract as:
             {
+                "invoice_number": "INV-2024-001",
                 "item_code": "ITEM001",
                 "qty": 10,
                 "conversion_factor": 12,
@@ -198,6 +202,7 @@ class InvoicePDFUpload(Document):
             
             FOR NORMAL INVOICE FORMAT:
             If standard invoice with just item, qty, rate, amount:
+            - invoice_number: Invoice number from PDF header
             - item_code: Item number/code
             - item_name: Item description
             - qty: Quantity
@@ -206,20 +211,22 @@ class InvoicePDFUpload(Document):
             
             Extract:
             1. invoice_type: "bill_of_supply" or "normal_invoice"
-            2. customer_name: Customer name (exact as shown)
-            3. invoice_date: Invoice date (format: YYYY-MM-DD)
-            4. items: Array of items based on format detected
-            5. total_amount: Grand total from last page
-            6. discount_percent: Discount percentage if shown (extract the % value, e.g., 5 for 5%)
-            7. discount_amount: Discount amount if shown in currency
-            8. tax_amount: Total tax (0 for Bill of Supply usually)
-            9. page_count: Number of pages processed
+            2. invoice_number: Invoice/Bill number from PDF (CRITICAL - extract this!)
+            3. customer_name: Customer name (exact as shown)
+            4. invoice_date: Invoice date (format: YYYY-MM-DD)
+            5. items: Array of items based on format detected
+            6. total_amount: Grand total from last page
+            7. discount_percent: Discount percentage if shown (extract the % value, e.g., 5 for 5%)
+            8. discount_amount: Discount amount if shown in currency
+            9. tax_amount: Total tax (0 for Bill of Supply usually)
+            10. page_count: Number of pages processed
             
             Return ONLY a valid JSON object:
             
             FOR BILL OF SUPPLY:
             {
                 "invoice_type": "bill_of_supply",
+                "invoice_number": "string (Invoice No from PDF)",
                 "customer_name": "string",
                 "invoice_date": "YYYY-MM-DD",
                 "items": [
@@ -243,6 +250,7 @@ class InvoicePDFUpload(Document):
             FOR NORMAL INVOICE:
             {
                 "invoice_type": "normal_invoice",
+                "invoice_number": "string (Invoice No from PDF)",
                 "customer_name": "string",
                 "invoice_date": "YYYY-MM-DD",
                 "items": [
@@ -599,12 +607,28 @@ class InvoicePDFUpload(Document):
             frappe.throw(f"Customer '{customer}' not found in ERPNext. Please create customer first.")
         
         invoice_type = extracted_data.get("invoice_type", "normal_invoice")
+        pdf_invoice_number = extracted_data.get("invoice_number")
         
         # Create invoice
         invoice = frappe.new_doc("Sales Invoice")
         invoice.customer = customer
         invoice.posting_date = extracted_data.get("invoice_date", frappe.utils.today())
         invoice.due_date = frappe.utils.add_days(invoice.posting_date, 30)
+        
+        # CRITICAL: Use PDF invoice number if available
+        if pdf_invoice_number:
+            pdf_invoice_number = str(pdf_invoice_number).strip()
+            
+            # Check if already exists
+            if frappe.db.exists("Sales Invoice", pdf_invoice_number):
+                frappe.msgprint(
+                    f"⚠️ Invoice '{pdf_invoice_number}' already exists. Using auto-number.",
+                    indicator="orange"
+                )
+            else:
+                # Force this specific invoice number
+                invoice.flags.ignore_naming_series = True
+                frappe.logger().info(f"Using PDF invoice number: {pdf_invoice_number}")
         
         # Apply discount if present
         discount_percent = extracted_data.get("discount_percent", 0)

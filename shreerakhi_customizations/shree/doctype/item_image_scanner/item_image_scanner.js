@@ -6,7 +6,7 @@ frappe.ui.form.on('Item Image Scanner', {
         // Scan button functionality
         frm.fields_dict['scan_button'].$input.on('click', function() {
             if (!frm.doc.scan_image) {
-                frappe.msgprint(__('Pehle image upload karein'));
+                frappe.msgprint(__('Please upload an image first'));
                 return;
             }
             scan_and_match_items(frm);
@@ -27,7 +27,7 @@ frappe.ui.form.on('Item Image Scanner', {
 });
 
 function scan_and_match_items(frm) {
-    frappe.show_progress(__('Scanning'), 30, 100, __('Items match ho rahi hain...'));
+    frappe.show_progress(__('Scanning'), 30, 100, __('Matching items...'));
     
     // CORRECT API call path
     frappe.call({
