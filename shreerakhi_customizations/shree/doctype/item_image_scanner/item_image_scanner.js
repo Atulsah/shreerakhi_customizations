@@ -48,13 +48,13 @@ function scan_and_match_items(frm) {
                 populate_child_table(frm, matches);
                 
                 frappe.show_alert({
-                    message: __(`${matches.length} items match hui (${r.message.total_items_checked} mein se)`),
+                    message: __(`${matches.length} items matched (out of ${r.message.total_items_checked})`),
                     indicator: 'green'
                 }, 5);
             } else {
                 frappe.msgprint({
-                    title: __('Koi Match Nahi'),
-                    message: r.message ? r.message.message : __('Koi matching items nahi mile'),
+                    title: __('No Matches Found'),
+                    message: r.message ? r.message.message : __('No matching items found. Try a different image.'),
                     indicator: 'orange'
                 });
             }
@@ -64,7 +64,7 @@ function scan_and_match_items(frm) {
             console.error('Scan error:', err);
             
             // Better error message
-            let error_msg = 'Scanning mein problem aayi. ';
+            let error_msg = 'Scanning error occurred. ';
             if (err.message) {
                 error_msg += err.message;
             } else {
@@ -83,7 +83,7 @@ function scan_and_match_items(frm) {
 function display_results(frm, matches) {
     if (!matches || matches.length === 0) {
         frm.fields_dict.matching_results.$wrapper.html(
-            '<div class="alert alert-warning">Koi matching items nahi mile. Different image try karein.</div>'
+            '<div class="alert alert-warning">No matching items found. Try a different image.</div>'
         );
         return;
     }
@@ -95,6 +95,21 @@ function display_results(frm, matches) {
         let stock_text = match.stock_qty > 0 ? `${match.stock_qty} In Stock` : 'Out of Stock';
         let match_class = match.match_percentage > 70 ? 'success' : 
                          match.match_percentage > 50 ? 'warning' : 'info';
+        
+        // Warehouse stock details
+        let warehouse_html = '';
+        if (match.warehouse_stock && match.warehouse_stock.length > 0) {
+            warehouse_html = '<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;">';
+            warehouse_html += '<strong style="font-size: 11px;">Warehouse Stock:</strong><br>';
+            match.warehouse_stock.forEach(function(wh) {
+                let wh_badge_class = wh.qty > 0 ? 'success' : 'secondary';
+                warehouse_html += `<div style="font-size: 10px; margin-top: 3px;">
+                    <span class="badge badge-${wh_badge_class}" style="font-size: 9px;">${wh.warehouse}</span>
+                    <span style="color: #666;"> ${wh.qty} qty (Avail: ${wh.available})</span>
+                </div>`;
+            });
+            warehouse_html += '</div>';
+        }
         
         html += `
             <div class="col-sm-6 col-md-4 col-lg-3" style="margin-bottom: 20px;">
@@ -118,13 +133,13 @@ function display_results(frm, matches) {
                                 </span>
                             </div>
                             <div style="margin-bottom: 5px;">
-                                <strong>Stock:</strong> 
+                                <strong>Total Stock:</strong> 
                                 <span class="badge badge-${stock_class}" style="font-size: 11px;">
                                     ${stock_text}
                                 </span>
                             </div>
                             ${match.item_group ? `<div style="margin-bottom: 5px;"><strong>Group:</strong> ${match.item_group}</div>` : ''}
-                            ${match.warehouse ? `<div style="margin-bottom: 5px;"><strong>Warehouse:</strong> ${match.warehouse}</div>` : ''}
+                            ${warehouse_html}
                         </div>
                         
                         <button class="btn btn-sm btn-primary" 
@@ -132,6 +147,12 @@ function display_results(frm, matches) {
                                 onclick="open_item('${match.item_code}')">
                             <i class="fa fa-external-link"></i> View Item
                         </button>
+                        ${match.warehouse_stock && match.warehouse_stock.length > 0 ? 
+                            `<button class="btn btn-sm btn-default" 
+                                    style="width: 100%; margin-top: 5px;"
+                                    onclick="show_warehouse_details('${match.item_code}', '${match.item_name}', ${JSON.stringify(match.warehouse_stock).replace(/"/g, '&quot;')})">
+                                <i class="fa fa-list"></i> Warehouse Details
+                            </button>` : ''}
                     </div>
                 </div>
             </div>
@@ -153,7 +174,15 @@ function populate_child_table(frm, matches) {
         row.match_percentage = match.match_percentage;
         row.stock_qty = match.stock_qty;
         row.image = match.image;
-        row.warehouse = match.warehouse;
+        
+        // Show primary warehouse with most stock
+        if (match.warehouse_stock && match.warehouse_stock.length > 0) {
+            // Sort by quantity (highest first)
+            let sorted_wh = match.warehouse_stock.sort((a, b) => b.qty - a.qty);
+            row.warehouse = sorted_wh[0].warehouse;
+        } else {
+            row.warehouse = match.warehouse;
+        }
     });
     
     frm.refresh_field('matched_items');
@@ -167,7 +196,7 @@ function add_camera_button(frm) {
     
     let btn_html = `
         <button class="btn btn-sm btn-default camera-btn" style="margin-top: 8px;">
-            <i class="fa fa-camera"></i> Camera se Photo Lo
+            <i class="fa fa-camera"></i> Take Photo
         </button>
     `;
     
@@ -182,7 +211,7 @@ function add_camera_button(frm) {
 
 function open_camera_dialog(frm) {
     let d = new frappe.ui.Dialog({
-        title: __('Camera se Photo'),
+        title: __('Take Photo'),
         size: 'large',
         fields: [
             {
@@ -196,14 +225,14 @@ function open_camera_dialog(frm) {
                         <canvas id="photo-canvas" style="display: none;"></canvas>
                         <div style="margin-top: 15px;">
                             <button class="btn btn-primary btn-lg" id="capture-photo">
-                                <i class="fa fa-camera"></i> Photo Lo
+                                <i class="fa fa-camera"></i> Capture
                             </button>
                             <button class="btn btn-default" id="switch-camera" style="margin-left: 10px;">
-                                <i class="fa fa-refresh"></i> Camera Switch
+                                <i class="fa fa-refresh"></i> Switch Camera
                             </button>
                         </div>
                         <p class="text-muted" style="margin-top: 10px;">
-                            Item ko camera ke samne rakhein
+                            Position the item in front of camera
                         </p>
                     </div>
                 `
@@ -239,7 +268,7 @@ function open_camera_dialog(frm) {
             })
             .catch(function(err) {
                 console.error('Camera error:', err);
-                frappe.msgprint(__('Camera access nahi mila. Browser settings check karein.'));
+                frappe.msgprint(__('Camera access denied. Please check browser settings.'));
             });
         }
         
