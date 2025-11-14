@@ -14,6 +14,9 @@ frappe.ui.form.on('Item Image Scanner', {
         
         // Camera button
         add_camera_button(frm);
+        
+        // Check matching status
+        check_matching_status(frm);
     },
     
     scan_image: function(frm) {
@@ -47,10 +50,15 @@ function scan_and_match_items(frm) {
                 display_results(frm, matches);
                 populate_child_table(frm, matches);
                 
+                // Show matching method being used
+                let method_indicator = r.message.imagehash_available ? 
+                    '<span class="indicator-pill green">Advanced Matching (imagehash)</span>' : 
+                    '<span class="indicator-pill orange">Standard Matching (PIL)</span>';
+                
                 frappe.show_alert({
-                    message: __(`${matches.length} items matched (out of ${r.message.total_items_checked})`),
+                    message: __(`${matches.length} items matched (out of ${r.message.total_items_checked}) - ${method_indicator}`),
                     indicator: 'green'
-                }, 5);
+                }, 7);
             } else {
                 frappe.msgprint({
                     title: __('No Matches Found'),
@@ -353,6 +361,64 @@ window.show_image = function(url, title) {
             fieldtype: 'HTML',
             options: `<img src="${url}" style="max-width: 100%; height: auto;">`
         }]
+    });
+    d.show();
+};
+
+window.show_warehouse_details = function(item_code, item_name, warehouse_stock) {
+    // Parse warehouse stock if it's a string
+    if (typeof warehouse_stock === 'string') {
+        warehouse_stock = JSON.parse(warehouse_stock);
+    }
+    
+    let html = '<table class="table table-bordered" style="margin-top: 10px;">';
+    html += '<thead><tr>';
+    html += '<th>Warehouse</th>';
+    html += '<th>Actual Qty</th>';
+    html += '<th>Reserved</th>';
+    html += '<th>Available</th>';
+    html += '</tr></thead><tbody>';
+    
+    let total_actual = 0;
+    let total_reserved = 0;
+    let total_available = 0;
+    
+    warehouse_stock.forEach(function(wh) {
+        total_actual += wh.qty || 0;
+        total_reserved += wh.reserved || 0;
+        total_available += wh.available || 0;
+        
+        let row_class = wh.available > 0 ? '' : 'text-muted';
+        html += `<tr class="${row_class}">`;
+        html += `<td><strong>${wh.warehouse}</strong></td>`;
+        html += `<td>${wh.qty || 0}</td>`;
+        html += `<td>${wh.reserved || 0}</td>`;
+        html += `<td><span class="badge badge-${wh.available > 0 ? 'success' : 'secondary'}">${wh.available || 0}</span></td>`;
+        html += '</tr>';
+    });
+    
+    // Total row
+    html += '<tr style="font-weight: bold; background-color: #f5f5f5;">';
+    html += '<td>TOTAL</td>';
+    html += `<td>${total_actual}</td>`;
+    html += `<td>${total_reserved}</td>`;
+    html += `<td><span class="badge badge-primary">${total_available}</span></td>`;
+    html += '</tr>';
+    
+    html += '</tbody></table>';
+    
+    let d = new frappe.ui.Dialog({
+        title: `Stock Details: ${item_name} (${item_code})`,
+        size: 'large',
+        fields: [{
+            fieldtype: 'HTML',
+            options: html
+        }],
+        primary_action_label: 'View Item',
+        primary_action: function() {
+            frappe.set_route('Form', 'Item', item_code);
+            d.hide();
+        }
     });
     d.show();
 };
