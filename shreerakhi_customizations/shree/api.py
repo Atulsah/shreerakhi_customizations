@@ -31,24 +31,47 @@ def match_item_by_image(image_url):
         if not uploaded_img:
             return {"success": False, "message": "Failed to load uploaded image"}
         
-        # Get all items with images
-        items = frappe.get_all(
-            "Item",
-            filters={"image": ["!=", ""], "disabled": 0},
-            fields=["name", "item_code", "item_name", "image", "item_group"]
-        )
+        # Get all items with images - OPTIMIZED QUERY
+        # Only fetch items where image field has actual URL (not empty/null)
+        items = frappe.db.sql("""
+            SELECT 
+                name,
+                item_code,
+                item_name,
+                image,
+                item_group
+            FROM `tabItem`
+            WHERE disabled = 0
+                AND image IS NOT NULL
+                AND image != ''
+                AND (image LIKE 'http%' OR image LIKE '/files/%')
+            ORDER BY modified DESC
+        """, as_dict=1)
+        
+        frappe.logger().info(f"Found {len(items)} items with valid images to scan")
         
         if not items:
             return {"success": False, "message": "No items with images found"}
         
         matches = []
         matching_method = "imagehash" if IMAGEHASH_AVAILABLE else "PIL-only"
+        scanned_count = 0
+        skipped_count = 0
         
         for item in items:
             try:
+                scanned_count += 1
+                
+                # Quick validation - skip if image URL is invalid
+                if not item.image or len(item.image) < 5:
+                    skipped_count += 1
+                    continue
+                
                 # Load item image
                 item_img = load_image_from_url(item.image)
                 if not item_img:
+                    skipped_count += 1
+                    frappe.logger().debug(f"Skipped {item.item_code} - image load failed")
                     continue
                 
                 # Calculate similarity - auto-select best method
@@ -101,6 +124,9 @@ def match_item_by_image(image_url):
             "success": True,
             "matches": matches[:20],
             "total_items_checked": len(items),
+            "scanned_count": scanned_count,
+            "skipped_count": skipped_count,
+            "matched_count": len(matches),
             "matching_method": matching_method,
             "imagehash_available": IMAGEHASH_AVAILABLE
         }
@@ -111,10 +137,19 @@ def match_item_by_image(image_url):
 
 
 def load_image_from_url(url):
-    """Load image from URL (local or external)"""
+    """
+    Load image from URL (local or external)
+    With basic caching to avoid repeated downloads
+    """
     try:
         if not url:
             return None
+        
+        # Check cache first (session cache for same scan)
+        cache_key = f"img_cache_{hashlib.md5(url.encode()).hexdigest()}"
+        cached = frappe.cache().get_value(cache_key)
+        if cached:
+            return Image.open(BytesIO(cached))
         
         # External URL
         if url.startswith("http://") or url.startswith("https://"):
@@ -129,6 +164,9 @@ def load_image_from_url(url):
             file_path = frappe.get_site_path("public", url.lstrip("/"))
             with open(file_path, "rb") as f:
                 img_data = f.read()
+        
+        # Cache for 5 minutes (per scan session)
+        frappe.cache().set_value(cache_key, img_data, expires_in_sec=300)
         
         # Load image
         img = Image.open(BytesIO(img_data))
@@ -436,9 +474,22 @@ def test_single_match(uploaded_url, item_code):
 @frappe.whitelist()
 def check_matching_status():
     """Check which matching method is available"""
+    
+    # Count items with images for performance estimate
+    items_with_images = frappe.db.sql("""
+        SELECT COUNT(*) as count
+        FROM `tabItem`
+        WHERE disabled = 0
+            AND image IS NOT NULL
+            AND image != ''
+            AND (image LIKE 'http%%' OR image LIKE '/files/%%')
+    """, as_dict=1)[0].count
+    
     return {
         "imagehash_available": IMAGEHASH_AVAILABLE,
         "pil_available": True,
         "active_method": "imagehash (Best)" if IMAGEHASH_AVAILABLE else "PIL-only (Good)",
-        "recommendation": "Install imagehash for better accuracy: pip3 install imagehash" if not IMAGEHASH_AVAILABLE else "Using best available method"
+        "recommendation": "Install imagehash for better accuracy: pip3 install imagehash" if not IMAGEHASH_AVAILABLE else "Using best available method",
+        "items_with_images": items_with_images,
+        "estimated_scan_time": f"{items_with_images * 0.5:.1f} seconds" if items_with_images else "N/A"
     }

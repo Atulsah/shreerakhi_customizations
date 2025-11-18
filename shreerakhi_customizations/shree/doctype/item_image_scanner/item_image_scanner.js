@@ -52,13 +52,19 @@ function scan_and_match_items(frm) {
                 
                 // Show matching method being used
                 let method_indicator = r.message.imagehash_available ? 
-                    '<span class="indicator-pill green">Advanced Matching (imagehash)</span>' : 
-                    '<span class="indicator-pill orange">Standard Matching (PIL)</span>';
+                    '<span class="indicator-pill green">Advanced</span>' : 
+                    '<span class="indicator-pill orange">Standard</span>';
+                
+                let stats = `
+                    Scanned: ${r.message.scanned_count} | 
+                    Matched: ${r.message.matched_count} | 
+                    Skipped: ${r.message.skipped_count}
+                `;
                 
                 frappe.show_alert({
-                    message: __(`${matches.length} items matched (out of ${r.message.total_items_checked}) - ${method_indicator}`),
+                    message: __(`Found ${matches.length} matches - ${stats}`),
                     indicator: 'green'
-                }, 7);
+                }, 8);
             } else {
                 frappe.msgprint({
                     title: __('No Matches Found'),
@@ -215,6 +221,32 @@ function add_camera_button(frm) {
     });
     
     frm.fields_dict.scan_image.$wrapper.append($btn);
+}
+
+function check_matching_status(frm) {
+    // Check which matching method is available
+    frappe.call({
+        method: 'shreerakhi_customizations.shree.api.check_matching_status',
+        callback: function(r) {
+            if (r.message) {
+                let status_html = `
+                    <div style="margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 11px;">
+                        <strong>Matching Engine:</strong> ${r.message.active_method}
+                        ${!r.message.imagehash_available ? 
+                            '<br><span style="color: #856404;">💡 Tip: Install imagehash for better accuracy</span>' : 
+                            '<br><span style="color: #155724;">✓ Using best available method</span>'}
+                    </div>
+                `;
+                
+                // Show status near scan button
+                if (frm.fields_dict.scan_button.$wrapper.find('.matching-status').length === 0) {
+                    frm.fields_dict.scan_button.$wrapper.append(
+                        `<div class="matching-status">${status_html}</div>`
+                    );
+                }
+            }
+        }
+    });
 }
 
 function open_camera_dialog(frm) {

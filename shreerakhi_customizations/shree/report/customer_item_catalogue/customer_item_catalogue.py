@@ -2,11 +2,12 @@ import frappe
 from frappe.utils import get_url
 from frappe.utils.pdf import get_pdf
 from frappe import _
+import json
 
 def execute(filters=None):
     filters = filters or {}
     columns = [
-        {"label": "Image Link", "fieldname": "image_link", "fieldtype": "HTML", "width": 150},  # Clickable in ERPNext
+        {"label": "Image Link", "fieldname": "image_link", "fieldtype": "HTML", "width": 150},
         {"label": "Item Code", "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 100},
         {"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 100},
         {"label": "Item Group", "fieldname": "item_group", "fieldtype": "Link", "options": "Item Group", "width": 100},
@@ -19,10 +20,23 @@ def execute(filters=None):
         {"label": "Selling Price", "fieldname": "selling_price", "fieldtype": "Currency", "width": 100}
     ]
 
-    price_list = (filters or {}).get("price_list") or "Standard Selling"
+    # Get filter values
+    price_list = filters.get("price_list") or "Standard Selling"
+    item_group_filter = filters.get("item_group_filter") or ""
+    min_qty = filters.get("min_qty")
+    item_categories = filters.get("item_categories") or []
+    
+    # Handle item_categories if it's a string (from URL params)
+    if isinstance(item_categories, str):
+        try:
+            item_categories = json.loads(item_categories)
+        except:
+            item_categories = [cat.strip() for cat in item_categories.split(',') if cat.strip()]
+    
     base_url = get_url()
     data = []
 
+    # Build the base SQL query
     sql_query = """
         SELECT 
             i.image AS image,
@@ -51,26 +65,40 @@ def execute(filters=None):
             `tabItem` i
         JOIN 
             `tabBin` bin ON bin.item_code = i.item_code
-        WHERE 
-            (
-                (i.item_group LIKE 'Semi Finish Goods%%' 
-                 AND (bin.actual_qty - IFNULL((SELECT SUM(si_item.qty) 
-                                               FROM `tabSales Invoice Item` si_item
-                                               JOIN `tabSales Invoice` si ON si.name = si_item.parent
-                                               WHERE si_item.item_code = i.item_code 
-                                                 AND si.docstatus = 0),0)) > 5000)
-                OR
-                (i.item_group LIKE 'Finish Goods%%' 
-                 AND (bin.actual_qty - IFNULL((SELECT SUM(si_item.qty) 
-                                               FROM `tabSales Invoice Item` si_item
-                                               JOIN `tabSales Invoice` si ON si.name = si_item.parent
-                                               WHERE si_item.item_code = i.item_code 
-                                                 AND si.docstatus = 0),0)) > 25)
-            )
+        WHERE 1=1
     """
+    
+    # Build query parameters
+    query_params = {
+        "price_list": price_list
+    }
+    
+    # Add item group filter only if specified
+    if item_group_filter:
+        sql_query += " AND i.item_group LIKE %(item_group_pattern)s"
+        query_params["item_group_pattern"] = f"{item_group_filter}%"
+    
+    # Add minimum quantity filter only if specified
+    if min_qty is not None and min_qty > 0:
+        sql_query += """ AND (bin.actual_qty - IFNULL((SELECT SUM(si_item.qty) 
+                                          FROM `tabSales Invoice Item` si_item
+                                          JOIN `tabSales Invoice` si ON si.name = si_item.parent
+                                          WHERE si_item.item_code = i.item_code 
+                                            AND si.docstatus = 0),0)) > %(min_qty)s"""
+        query_params["min_qty"] = min_qty
+    
+    # Add category filter only if categories are selected
+    if item_categories and len(item_categories) > 0:
+        # Create placeholders for categories
+        category_placeholders = ", ".join([f"%(category_{i})s" for i in range(len(item_categories))])
+        sql_query += f" AND i.custom_item_category IN ({category_placeholders})"
+        
+        # Add categories to query params
+        for i, category in enumerate(item_categories):
+            query_params[f"category_{i}"] = category
 
     try:
-        data = frappe.db.sql(sql_query, {"price_list": price_list}, as_dict=1) or []
+        data = frappe.db.sql(sql_query, query_params, as_dict=1) or []
     except Exception as e:
         frappe.log_error(f"Customer Item Catalogue query failed: {e}")
 
@@ -102,13 +130,52 @@ def execute(filters=None):
     return columns, data
 
 @frappe.whitelist()
-def download_customer_catalogue(price_list=None):
-    columns, data = execute(filters={"price_list": price_list})
+def get_item_categories():
+    """Get all unique item categories for the filter"""
+    try:
+        categories = frappe.db.sql("""
+            SELECT DISTINCT custom_item_category 
+            FROM `tabItem`
+            WHERE custom_item_category IS NOT NULL 
+              AND custom_item_category != ''
+            ORDER BY custom_item_category
+        """, as_dict=1)
+        
+        return [cat.get('custom_item_category') for cat in categories]
+    except Exception as e:
+        frappe.log_error(f"Failed to fetch item categories: {e}")
+        return []
+
+@frappe.whitelist()
+def download_customer_catalogue(price_list=None, item_group_filter=None, min_qty=None, item_categories=None):
+    # Convert min_qty to integer if provided
+    if min_qty:
+        try:
+            min_qty = int(min_qty)
+        except:
+            min_qty = None
+    
+    # Handle item_categories parameter
+    if item_categories:
+        if isinstance(item_categories, str):
+            try:
+                item_categories = json.loads(item_categories)
+            except:
+                item_categories = [cat.strip() for cat in item_categories.split(',') if cat.strip()]
+    
+    columns, data = execute(filters={
+        "price_list": price_list,
+        "item_group_filter": item_group_filter,
+        "min_qty": min_qty,
+        "item_categories": item_categories
+    })
 
     base_url = get_url()
     context = {
         "items": data,
         "price_list": price_list,
+        "item_group_filter": item_group_filter,
+        "item_categories": item_categories,
         "base_url": base_url,
     }
 
