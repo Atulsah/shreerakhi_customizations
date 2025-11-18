@@ -185,10 +185,29 @@ def download_customer_catalogue(price_list=None, item_group_filter=None, min_qty
     )
 
     try:
-        pdf_content = get_pdf(html)
-    except Exception:
-        frappe.throw(_("PDF generation failed (check image links or wkhtmltopdf setup)."))
+        # Optimized PDF options for Frappe Cloud
+        pdf_options = {
+            "page-size": "A4",
+            "margin-top": "15mm",
+            "margin-right": "15mm",
+            "margin-bottom": "15mm",
+            "margin-left": "15mm",
+            "encoding": "UTF-8",
+            "no-outline": None,
+            "enable-local-file-access": None,
+            "print-media-type": None,
+            "disable-smart-shrinking": None,
+            "dpi": 96,
+            "image-quality": 85,
+            "load-error-handling": "ignore",
+            "load-media-error-handling": "ignore"
+        }
+        
+        pdf_content = get_pdf(html, pdf_options)
+    except Exception as e:
+        frappe.log_error(f"PDF generation failed: {str(e)}")
+        frappe.throw(_("PDF generation failed. Please check error logs or contact administrator."))
 
-    frappe.local.response.filename = "Customer_Catalogue.pdf"
+    frappe.local.response.filename = f"Customer_Catalogue_{frappe.utils.now_datetime().strftime('%Y%m%d_%H%M%S')}.pdf"
     frappe.local.response.filecontent = pdf_content
     frappe.local.response.type = "download"

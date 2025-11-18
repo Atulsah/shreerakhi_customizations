@@ -4,9 +4,15 @@
     <meta charset="UTF-8">
     <title>Customer Item Catalogue</title>
     <style>
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        
         body {
             font-family: "Georgia", serif;
-            margin: 30px;
+            margin: 0;
+            padding: 0;
             background-color: #f2be7a;
             color: #9f5959;
         }
@@ -14,59 +20,128 @@
         /* Page Header */
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            page-break-after: avoid;
         }
-        .header img { width: 120px; margin-bottom: 10px; }
-        .header h1 { font-size: 36px; font-style: italic; font-weight: 400; color: #4b2007df; margin: 0; }
-        .header p { font-size: 16px; color: #4a2a13e0; }
+        .header img { 
+            width: 100px; 
+            margin-bottom: 8px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .header h1 { 
+            font-size: 28px; 
+            font-style: italic; 
+            font-weight: 400; 
+            color: #4b2007df; 
+            margin: 5px 0; 
+        }
+        .header p { 
+            font-size: 14px; 
+            color: #4a2a13e0; 
+            margin: 0;
+        }
 
         /* Product Card */
         .product {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 25px;
-            padding: 15px;
-            border-radius: 12px;
-            background-color: #f8d9b0; /* subtle card background */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.75);
-            page-break-inside: avoid;
+            display: table;
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            background-color: #f8d9b0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
-        .product img {
-            width: 200px;
-            height: 200px;
-            border-radius: 12px;
+        
+        .product-inner {
+            display: table-row;
+        }
+        
+        .product-image {
+            display: table-cell;
+            width: 160px;
+            vertical-align: top;
+            padding-right: 15px;
+        }
+        
+        .product-image img {
+            width: 150px;
+            height: 150px;
+            border-radius: 8px;
             object-fit: cover;
-            margin-right: 20px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            display: block;
         }
-        .details { flex: 1; }
-        .details h3 { margin: 0; font-size: 18px; color: #362420; }
-        .details p { font-size: 13px; color: #4d4036; margin: 5px 0; }
+        
+        .product-details {
+            display: table-cell;
+            vertical-align: top;
+            padding-right: 10px;
+        }
+        
+        .product-price {
+            display: table-cell;
+            width: 100px;
+            vertical-align: top;
+            text-align: right;
+        }
+        
+        .product-details h3 { 
+            margin: 0 0 8px 0; 
+            font-size: 16px; 
+            color: #362420; 
+        }
+        
+        .product-details p { 
+            font-size: 12px; 
+            color: #4d4036; 
+            margin: 3px 0; 
+            line-height: 1.4;
+        }
+        
         .price {
             font-weight: bold;
-            font-size: 16px;
-            color: #b87333; /* golden color for price */
-            margin-left: auto;
+            font-size: 15px;
+            color: #b87333;
             white-space: nowrap;
         }
 
-        /* Page break */
-        .page-break { page-break-after: always; }
-        .page-number { text-align: center; font-size: 12px; color: #4d4036; margin-bottom: 5px; }
+        /* Page break control */
+        .page-break { 
+            page-break-after: always !important;
+            break-after: page !important;
+            clear: both;
+        }
+        
+        .page-number { 
+            text-align: center; 
+            font-size: 11px; 
+            color: #4d4036; 
+            margin: 10px 0;
+            page-break-after: avoid;
+        }
 
+        /* Ensure no orphans */
+        .product-container {
+            page-break-inside: avoid !important;
+        }
     </style>
 </head>
 <body>
 
 {% set placeholder = base_url ~ "/assets/shreerakhi_customizations/images/placeholder.png" %}
+{% set items_per_page = 4 %}
 
 {% for item in items %}
-    {% if loop.index0 % 4 == 0 %}
+    {% if loop.index0 % items_per_page == 0 %}
         {% if loop.index0 != 0 %}
-            <!-- Page number before break -->
-            <div class="page-number">Page {{ (loop.index0 // 4) }}</div>
+            <div class="page-number">Page {{ (loop.index0 // items_per_page) }}</div>
             <div class="page-break"></div>
         {% endif %}
+        
         <!-- Header for each page -->
         <div class="header">
             <img src="https://i.postimg.cc/KjrmwYGD/shree-logo-removebg-preview.png" alt="Shree Logo">
@@ -75,24 +150,31 @@
     {% endif %}
 
     <!-- Product Row -->
-    <div class="product">
-        <img src="{{ (item.image and item.image) or placeholder }}" alt="{{ item.item_name or 'No Image' }}">
-        <div class="details">
-            <h3>{{ item.item_name or 'Unnamed Item' }}</h3>
-            <p><strong>Code:</strong> {{ item.item_code }}</p>
-            <p><strong>Group:</strong> {{ item.item_group }}</p>
-            <p><strong>Range:</strong> {{ item.item_range or '-' }}</p>
-            <p><strong>Range Name:</strong> {{ item.item_range_name or '-' }}</p>
-            <p><strong>Box Type:</strong> {{ item.box_type or '-' }}</p>
-            <p><strong>Category:</strong> {{ item.item_category or '-' }}</p>
-            <p><strong>Stock:</strong> {{ item.available_qty or 0 }} {{ item.stock_uom or '' }}</p>
+    <div class="product-container">
+        <div class="product">
+            <div class="product-inner">
+                <div class="product-image">
+                    <img src="{{ (item.image and item.image) or placeholder }}" alt="{{ item.item_name or 'No Image' }}">
+                </div>
+                <div class="product-details">
+                    <h3>{{ item.item_name or 'Unnamed Item' }}</h3>
+                    <p><strong>Code:</strong> {{ item.item_code }}</p>
+                    <p><strong>Group:</strong> {{ item.item_group }}</p>
+                    <p><strong>Range:</strong> {{ item.item_range or '-' }}</p>
+                    <p><strong>Range Name:</strong> {{ item.item_range_name or '-' }}</p>
+                    <p><strong>Box Type:</strong> {{ item.box_type or '-' }}</p>
+                    <p><strong>Category:</strong> {{ item.item_category or '-' }}</p>
+                    <p><strong>Stock:</strong> {{ item.available_qty or 0 }} {{ item.stock_uom or '' }}</p>
+                </div>
+                <div class="product-price">
+                    <div class="price">₹ {{ "{:,.2f}".format(item.selling_price or 0) }}</div>
+                </div>
+            </div>
         </div>
-        <div class="price">₹ {{ item.selling_price or 0 }}</div>
     </div>
 
     {% if loop.last %}
-        <!-- Page number for last page -->
-        <div class="page-number">Page {{ ((loop.index0 // 4) + 1) }}</div>
+        <div class="page-number">Page {{ ((loop.index0 // items_per_page) + 1) }}</div>
     {% endif %}
 
 {% endfor %}
