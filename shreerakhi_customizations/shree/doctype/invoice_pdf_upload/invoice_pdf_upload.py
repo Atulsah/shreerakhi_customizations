@@ -1,5 +1,5 @@
 # Copyright (c) 2024, Atul Sah
-# Frappe Cloud Compatible Version - Uses External APIs
+# Simplified Version - Auto-numbering with Series Selection Only
 
 import frappe
 from frappe.model.document import Document
@@ -14,6 +14,11 @@ class InvoicePDFUpload(Document):
         # Validate PDF is present for new documents or if not yet processed
         if self.is_new() and not self.pdf_file:
             frappe.throw("Please upload a PDF file")
+        
+        # Validate invoice series if auto-create is enabled
+        if self.auto_create_invoice:
+            if not self.invoice_series:
+                frappe.throw("Please select an Invoice Series")
         
         # Only process if PDF exists and invoice not yet created
         if self.pdf_file and not self.sales_invoice and self.auto_create_invoice:
@@ -44,14 +49,13 @@ class InvoicePDFUpload(Document):
             else:
                 self.detected_invoice_type = "Normal Invoice"
             
-            # Sales Invoice create karna
+            # Sales Invoice create karna with auto-numbering
             if extracted_data and extracted_data.get("customer_name"):
                 invoice = self.create_sales_invoice(extracted_data)
                 self.sales_invoice = invoice.name
                 self.invoice_status = "Processed"
                 
-                # Note: PDF will be deleted in on_update hook AFTER save
-                frappe.msgprint(f"Sales Invoice {invoice.name} successfully created!")
+                frappe.msgprint(f"Sales Invoice {invoice.name} successfully created with auto-numbering!")
             else:
                 self.invoice_status = "Failed"
                 frappe.msgprint("Could not extract sufficient data from PDF", indicator="red")
@@ -82,7 +86,6 @@ class InvoicePDFUpload(Document):
                 
             except Exception as e:
                 frappe.log_error(f"Error deleting PDF in on_update: {str(e)}", "PDF Deletion Error")
-                # Don't throw - document is already saved
     
     def delete_pdf_file(self, file_name, file_path):
         """Delete PDF file after successful extraction to save space"""
@@ -103,7 +106,6 @@ class InvoicePDFUpload(Document):
             
         except Exception as e:
             frappe.log_error(f"Error deleting PDF file: {str(e)}", "PDF Deletion Error")
-            # Don't throw error - extraction was successful, deletion is optional
     
     def extract_pdf_using_api(self, file_doc):
         """External API use karke PDF se data extract karna"""
@@ -127,18 +129,14 @@ class InvoicePDFUpload(Document):
             if not api_key:
                 frappe.throw("Gemini API key not configured. Add 'gemini_api_key' in site_config.json")
             
-            # Verify API key format
             if not api_key.startswith("AIzaSy"):
                 frappe.throw("Invalid Gemini API key format. Key should start with 'AIzaSy'")
             
-            # File content read karna
             file_path = file_doc.get_full_path()
             
-            # PDF ko base64 encode karna
             with open(file_path, 'rb') as f:
                 pdf_content = base64.b64encode(f.read()).decode('utf-8')
             
-            # Multiple API endpoints to try with CORRECT model names
             endpoints_to_try = [
                 f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}",
                 f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}",
@@ -146,64 +144,28 @@ class InvoicePDFUpload(Document):
             ]
             
             prompt = """
-            This is a MULTIPAGE INVOICE PDF. It can be either:
-            1. NORMAL INVOICE FORMAT - with item_code, qty, rate, amount
-            2. BILL OF SUPPLY FORMAT - with item_code, box, packing, unit, quantity, rate, amount
+            This is a MULTIPAGE INVOICE PDF. Extract the following information from ALL PAGES:
             
-            Extract the following information from ALL PAGES:
+            IMPORTANT: DO NOT extract invoice number - system will auto-generate it.
             
-            IMPORTANT INSTRUCTIONS:
-            - Read ALL pages of the PDF carefully
-            - Detect invoice format automatically (Normal or Bill of Supply)
-            - Customer name and invoice date are usually on the FIRST page
-            - Items may be spread across MULTIPLE pages
-            - Extract ALL items from ALL pages (do not skip any items)
-            - Avoid duplicate items (if header repeats on each page)
-            - Grand total and tax are usually on the LAST page
+            Detect invoice format:
+            1. NORMAL INVOICE - with item_code, qty, rate, amount
+            2. BILL OF SUPPLY - with item_code, box, packing, unit, quantity, rate, amount
             
             FOR BILL OF SUPPLY FORMAT:
-            Look for table with columns: SL.NO, ITEM NO, BOX, PACKING, UNIT, QUANTITY, RATE, AMOUNT
+            Extract from table with columns: SL.NO, ITEM NO, BOX, PACKING, UNIT, QUANTITY, RATE, AMOUNT
             
-            Extract these EXACT values for each item:
-            1. invoice_number: Invoice number from PDF (look for "Invoice No", "Bill No", "Document No", etc.)
-            2. item_code: From ITEM NO column
-            3. qty: From BOX column (number of boxes sold)
-            4. conversion_factor: From PACKING column (items per box)
-            5. stock_uom: From UNIT column (e.g., PCS, DOZ, KG)
-            6. stock_qty: From QUANTITY column (should equal BOX × PACKING)
-            7. stock_rate: From RATE column (rate per stock UOM, NOT box rate)
-            8. amount: From AMOUNT column (total amount)
+            Extract:
+            1. item_code: From ITEM NO column
+            2. qty: From BOX column (boxes sold)
+            3. conversion_factor: From PACKING column (items per box)
+            4. stock_uom: From UNIT column (PCS, DOZ, KG, etc.)
+            5. stock_qty: From QUANTITY column
+            6. stock_rate: From RATE column (rate per stock UOM)
+            7. amount: From AMOUNT column
             
-            CRITICAL FOR BILL OF SUPPLY:
-            - "invoice_number" = Extract from PDF header (Invoice No, Bill No, Doc No, etc.)
-            - "qty" = BOX value (sales quantity in boxes)
-            - "conversion_factor" = PACKING value
-            - "stock_uom" = UNIT value (PCS, DOZ, KG, etc.)
-            - "stock_qty" = QUANTITY value
-            - "stock_rate" = RATE value (this is rate per stock UOM, e.g., ₹20 per PCS)
-            - "amount" = AMOUNT value
-            - DO NOT calculate box_rate - we will do it later
-            
-            Example Bill of Supply row:
-            Invoice No: INV-2024-001
-            | 1 | ITEM001 | 10 | 12 | PCS | 120 | 50 | 6000 |
-            
-            Should extract as:
-            {
-                "invoice_number": "INV-2024-001",
-                "item_code": "ITEM001",
-                "qty": 10,
-                "conversion_factor": 12,
-                "stock_uom": "PCS",
-                "stock_qty": 120,
-                "stock_rate": 50,
-                "amount": 6000
-            }
-            
-            FOR NORMAL INVOICE FORMAT:
-            If standard invoice with just item, qty, rate, amount:
-            - invoice_number: Invoice number from PDF header
-            - item_code: Item number/code
+            FOR NORMAL INVOICE:
+            - item_code: Item code
             - item_name: Item description
             - qty: Quantity
             - rate: Rate per unit
@@ -211,70 +173,16 @@ class InvoicePDFUpload(Document):
             
             Extract:
             1. invoice_type: "bill_of_supply" or "normal_invoice"
-            2. invoice_number: Invoice/Bill number from PDF (CRITICAL - extract this!)
-            3. customer_name: Customer name (exact as shown)
-            4. invoice_date: Invoice date (format: YYYY-MM-DD)
-            5. items: Array of items based on format detected
-            6. total_amount: Grand total from last page
-            7. discount_percent: Discount percentage if shown (extract the % value, e.g., 5 for 5%)
-            8. discount_amount: Discount amount if shown in currency
-            9. tax_amount: Total tax (0 for Bill of Supply usually)
-            10. page_count: Number of pages processed
+            2. customer_name: Customer name
+            3. invoice_date: Date (YYYY-MM-DD)
+            4. items: Array of items
+            5. total_amount: Grand total
+            6. discount_percent: Discount % (if exists)
+            7. discount_amount: Discount amount (if exists)
+            8. tax_amount: Tax amount
+            9. page_count: Pages processed
             
-            Return ONLY a valid JSON object:
-            
-            FOR BILL OF SUPPLY:
-            {
-                "invoice_type": "bill_of_supply",
-                "invoice_number": "string (Invoice No from PDF)",
-                "customer_name": "string",
-                "invoice_date": "YYYY-MM-DD",
-                "items": [
-                    {
-                        "item_code": "string",
-                        "qty": number (BOX value),
-                        "conversion_factor": number (PACKING value),
-                        "stock_uom": "string (UNIT value like PCS/DOZ/KG)",
-                        "stock_qty": number (QUANTITY value),
-                        "stock_rate": number (RATE value - per stock UOM),
-                        "amount": number (AMOUNT value)
-                    }
-                ],
-                "total_amount": number,
-                "discount_percent": number (optional, e.g., 5 for 5%),
-                "discount_amount": number (optional),
-                "tax_amount": number,
-                "page_count": number
-            }
-            
-            FOR NORMAL INVOICE:
-            {
-                "invoice_type": "normal_invoice",
-                "invoice_number": "string (Invoice No from PDF)",
-                "customer_name": "string",
-                "invoice_date": "YYYY-MM-DD",
-                "items": [
-                    {
-                        "item_code": "string",
-                        "item_name": "string",
-                        "qty": number,
-                        "rate": number,
-                        "amount": number
-                    }
-                ],
-                "total_amount": number,
-                "discount_percent": number (optional),
-                "discount_amount": number (optional),
-                "tax_amount": number,
-                "page_count": number
-            }
-            
-            CRITICAL: 
-            - For Bill of Supply, extract "stock_rate" (rate per stock UOM), NOT box rate
-            - Do NOT calculate any derived values, extract exactly what's in PDF
-            - Process EVERY page
-            - Include ALL items from ALL pages
-            - Return ONLY valid JSON, no markdown, no extra text
+            Return ONLY valid JSON - no invoice_number field needed (auto-generated).
             """
             
             payload = {
@@ -297,7 +205,6 @@ class InvoicePDFUpload(Document):
                 }
             }
             
-            # Try each endpoint
             last_error = None
             for idx, url in enumerate(endpoints_to_try):
                 try:
@@ -316,7 +223,6 @@ class InvoicePDFUpload(Document):
                         if result.get("candidates"):
                             text_response = result["candidates"][0]["content"]["parts"][0]["text"]
                             
-                            # JSON extract karna (markdown code blocks ko handle karna)
                             text_response = text_response.strip()
                             if text_response.startswith("```json"):
                                 text_response = text_response[7:]
@@ -327,7 +233,6 @@ class InvoicePDFUpload(Document):
                             
                             extracted_data = json.loads(text_response.strip())
                             
-                            # Multipage validation
                             if extracted_data.get("page_count"):
                                 frappe.msgprint(
                                     f"Processed {extracted_data['page_count']} pages. "
@@ -335,11 +240,6 @@ class InvoicePDFUpload(Document):
                                     indicator="blue"
                                 )
                             
-                            # Log multipage processing notes
-                            if extracted_data.get("notes"):
-                                frappe.logger().info(f"Multipage Notes: {extracted_data['notes']}")
-                            
-                            # Data validation
                             extracted_data = self.validate_extracted_data(extracted_data)
                             
                             return extracted_data
@@ -354,20 +254,10 @@ class InvoicePDFUpload(Document):
                     last_error = str(e)
                     continue
             
-            # All endpoints failed
             if "404" in str(last_error):
-                frappe.throw(f"""
-                    Gemini API Error: Model not found (404)
-                    
-                    Solutions:
-                    1. Generate new API key: https://makersuite.google.com/app/apikey
-                    2. Enable Generative Language API in Google Cloud Console
-                    3. Wait 2-3 minutes after enabling
-                    
-                    Current error: {last_error}
-                """)
+                frappe.throw(f"Gemini API Error: Model not found. Generate new key at https://makersuite.google.com/app/apikey")
             elif "403" in str(last_error):
-                frappe.throw("Gemini API Error: Permission denied. Enable the Generative Language API in Google Cloud Console.")
+                frappe.throw("Gemini API Error: Permission denied. Enable the Generative Language API.")
             else:
                 frappe.throw(f"Gemini API extraction failed: {last_error}")
             
@@ -385,7 +275,6 @@ class InvoicePDFUpload(Document):
             if not api_key:
                 frappe.throw("OpenAI API key not configured")
             
-            # File content read karna
             file_path = file_doc.get_full_path()
             
             with open(file_path, 'rb') as f:
@@ -398,7 +287,7 @@ class InvoicePDFUpload(Document):
                 "Content-Type": "application/json"
             }
             
-            prompt = """Extract invoice data and return as JSON:
+            prompt = """Extract invoice data and return as JSON (NO invoice_number field):
             {
                 "customer_name": "string",
                 "invoice_date": "YYYY-MM-DD",
@@ -450,7 +339,6 @@ class InvoicePDFUpload(Document):
             
             file_path = file_doc.get_full_path()
             
-            # Azure Form Recognizer API call
             url = f"{endpoint}/formrecognizer/documentModels/prebuilt-invoice:analyze?api-version=2023-07-31"
             
             headers = {
@@ -463,10 +351,8 @@ class InvoicePDFUpload(Document):
             
             response.raise_for_status()
             
-            # Get operation location
             operation_url = response.headers["Operation-Location"]
             
-            # Poll for results
             import time
             for _ in range(10):
                 time.sleep(2)
@@ -503,7 +389,6 @@ class InvoicePDFUpload(Document):
             "tax_amount": fields.get("TotalTax", {}).get("content", 0)
         }
         
-        # Items extract karna
         items = fields.get("Items", {}).get("valueArray", [])
         for item in items:
             item_fields = item.get("valueObject", {})
@@ -520,38 +405,25 @@ class InvoicePDFUpload(Document):
     def validate_extracted_data(self, data):
         """Extracted data ko validate aur clean karna"""
         
-        # Remove duplicate items (common in multipage invoices)
+        # Remove duplicate items
         if data.get("items"):
             unique_items = []
             seen_items = set()
             
             for item in data["items"]:
-                # Create unique key from item_code and amount
                 item_key = f"{item.get('item_code', '')}_{item.get('amount', 0)}"
                 
                 if item_key not in seen_items:
                     seen_items.add(item_key)
                     unique_items.append(item)
-                else:
-                    frappe.logger().info(f"Removed duplicate item: {item.get('item_code')}")
             
             data["items"] = unique_items
-            
-            # Log if duplicates were found
-            original_count = len(data.get("items", []))
-            if original_count != len(unique_items):
-                frappe.msgprint(
-                    f"Removed {original_count - len(unique_items)} duplicate items",
-                    indicator="orange"
-                )
         
-        # Customer name validation
+        # Customer validation
         if data.get("customer_name"):
             customer_name = data["customer_name"].strip()
             
-            # ERPNext mein customer exist karta hai check karna
             if not frappe.db.exists("Customer", customer_name):
-                # Similar customer dhundna
                 similar = frappe.db.get_all(
                     "Customer",
                     filters={"customer_name": ["like", f"%{customer_name[:10]}%"]},
@@ -560,7 +432,6 @@ class InvoicePDFUpload(Document):
                 if similar:
                     data["customer_name"] = similar[0].name
                 else:
-                    # New customer suggest karna
                     data["_customer_not_found"] = True
         
         # Date validation
@@ -575,114 +446,67 @@ class InvoicePDFUpload(Document):
         validated_items = []
         for item in data.get("items", []):
             if item.get("item_code"):
-                # Item exist karta hai check karna
                 if frappe.db.exists("Item", item["item_code"]):
                     validated_items.append(item)
                 else:
-                    # Item ka fallback
                     item["_item_not_found"] = True
                     validated_items.append(item)
         
         data["items"] = validated_items
         
-        # Validate totals match sum of items
-        items_total = sum(item.get("amount", 0) for item in data.get("items", []))
-        declared_total = data.get("total_amount", 0)
-        
-        # Allow 1% variance for rounding differences
-        if items_total > 0 and abs(items_total - declared_total) / items_total > 0.01:
-            frappe.msgprint(
-                f"Warning: Items total (₹{items_total:.2f}) doesn't match declared total (₹{declared_total:.2f})",
-                indicator="orange"
-            )
-            data["_total_mismatch"] = True
-        
         return data
     
     def create_sales_invoice(self, extracted_data):
-        """Create invoice with correct Box rate calculation for Bill of Supply"""
+        """Create invoice with auto-numbering based on selected series"""
         
         customer = extracted_data.get("customer_name")
         if not customer or extracted_data.get("_customer_not_found"):
             frappe.throw(f"Customer '{customer}' not found in ERPNext. Please create customer first.")
         
         invoice_type = extracted_data.get("invoice_type", "normal_invoice")
-        pdf_invoice_number = extracted_data.get("invoice_number")
         
-        # Create invoice
+        # Create invoice with auto-numbering
         invoice = frappe.new_doc("Sales Invoice")
         invoice.customer = customer
         invoice.posting_date = extracted_data.get("invoice_date", frappe.utils.today())
         invoice.due_date = frappe.utils.add_days(invoice.posting_date, 30)
         
-        # CRITICAL: Use PDF invoice number if available
-        if pdf_invoice_number:
-            pdf_invoice_number = str(pdf_invoice_number).strip()
-            
-            # Check if already exists
-            if frappe.db.exists("Sales Invoice", pdf_invoice_number):
-                frappe.msgprint(
-                    f"⚠️ Invoice '{pdf_invoice_number}' already exists. Using auto-number.",
-                    indicator="orange"
-                )
-            else:
-                # Force this specific invoice number
-                invoice.flags.ignore_naming_series = True
-                frappe.logger().info(f"Using PDF invoice number: {pdf_invoice_number}")
+        # Set naming series - ERPNext will auto-generate number
+        invoice.naming_series = self.invoice_series
+        
+        discount_percent = extracted_data.get("discount_percent")
+        discount_amount = extracted_data.get("discount_amount")
         
         # Apply discount if present
-        discount_percent = extracted_data.get("discount_percent", 0)
-        discount_amount = extracted_data.get("discount_amount", 0)
-        
-        if discount_percent > 0:
+        if discount_percent and float(discount_percent) > 0:
             invoice.additional_discount_percentage = float(discount_percent)
-            frappe.logger().info(f"Applied discount: {discount_percent}%")
-        elif discount_amount > 0:
+        elif discount_amount and float(discount_amount) > 0:
             invoice.discount_amount = float(discount_amount)
-            frappe.logger().info(f"Applied discount amount: ₹{discount_amount}")
         
         # Add items
         if invoice_type == "bill_of_supply":
             for item_data in extracted_data.get("items", []):
                 if item_data.get("_item_not_found"):
-                    frappe.msgprint(f"Item '{item_data.get('item_code')}' not found. Skipping.", indicator="orange")
                     continue
                 
-                # CRITICAL CALCULATION:
-                # PDF RATE = stock UOM rate (per PCS)
-                # ERPNext needs Box rate = PACKING × PDF_RATE
+                qty = float(item_data.get("qty", 1))
+                conversion_factor = float(item_data.get("conversion_factor", 1))
+                stock_rate = float(item_data.get("stock_rate", 0))
+                stock_uom = item_data.get("stock_uom", "Nos")
                 
-                qty = float(item_data.get("qty", 1))  # BOX
-                conversion_factor = float(item_data.get("conversion_factor", 1))  # PACKING
-                stock_rate = float(item_data.get("stock_rate", 0))  # PDF RATE (per stock UOM)
-                stock_uom = item_data.get("stock_uom", "Nos")  # UNIT
-                
-                # Calculate Box rate
                 box_rate = conversion_factor * stock_rate
                 
-                # Add row with calculated Box rate
                 row = invoice.append("items", {
                     "item_code": item_data["item_code"],
                     "qty": qty,
-                    "uom": "Box",  # ALWAYS Box for Bill of Supply
-                    "rate": box_rate  # This is rate per Box
+                    "uom": "Box",
+                    "rate": box_rate
                 })
                 
-                # Set stock fields IMMEDIATELY after append
                 row.stock_uom = stock_uom
                 row.conversion_factor = conversion_factor
                 row.stock_qty = float(item_data.get("stock_qty", qty * conversion_factor))
-                
-                # Log for debugging
-                frappe.logger().info(
-                    f"{item_data['item_code']}: "
-                    f"Qty={qty} Box, CF={conversion_factor}, "
-                    f"Stock Rate={stock_rate}/{stock_uom}, Box Rate={box_rate}, "
-                    f"Stock Qty={row.stock_qty} {stock_uom}"
-                )
-                
         else:
-            # Normal invoice
             for item_data in extracted_data.get("items", []):
                 if item_data.get("_item_not_found"):
                     continue
@@ -697,108 +521,13 @@ class InvoicePDFUpload(Document):
         if not invoice.items:
             frappe.throw("No valid items found to create invoice")
         
-        # Insert invoice
+        # Insert invoice - ERPNext will auto-generate the invoice number
         invoice.insert(ignore_permissions=True)
         
-        # Apply discount for ALL invoice types (not just Bill of Supply)
-        discount_applied = False
+        # Log the auto-generated invoice number
+        frappe.logger().info(f"Created invoice with auto-number: {invoice.name}")
         
-        if discount_percent > 0:
-            frappe.db.sql("""
-                UPDATE `tabSales Invoice`
-                SET 
-                    additional_discount_percentage = %s,
-                    apply_discount_on = 'Grand Total'
-                WHERE name = %s
-            """, (float(discount_percent), invoice.name))
-            discount_applied = True
-            frappe.logger().info(f"Applied discount: {discount_percent}%")
-            
-        elif discount_amount > 0:
-            frappe.db.sql("""
-                UPDATE `tabSales Invoice`
-                SET discount_amount = %s
-                WHERE name = %s
-            """, (float(discount_amount), invoice.name))
-            discount_applied = True
-            frappe.logger().info(f"Applied discount amount: ₹{discount_amount}")
-        
-        if discount_applied:
-            frappe.db.commit()
-        
-        # FORCE CORRECTION for Bill of Supply: Ensure UOM is "Box" and stock fields are correct
-        if invoice_type == "bill_of_supply":
-            extracted_items = {item["item_code"]: item 
-                              for item in extracted_data.get("items", [])}
-            
-            needs_correction = False
-            
-            for row in invoice.items:
-                if row.item_code in extracted_items:
-                    expected = extracted_items[row.item_code]
-                    
-                    expected_stock_uom = expected.get("stock_uom", "Nos")
-                    expected_cf = float(expected.get("conversion_factor", 1))
-                    expected_stock_qty = float(expected.get("stock_qty", 0))
-                    
-                    # Check if correction needed
-                    if (row.uom != "Box" or
-                        row.stock_uom != expected_stock_uom or 
-                        abs(row.conversion_factor - expected_cf) > 0.01 or
-                        abs(row.stock_qty - expected_stock_qty) > 0.01):
-                        
-                        needs_correction = True
-                        
-                        frappe.logger().info(
-                            f"Correcting {row.item_code}: "
-                            f"UOM {row.uom}→Box, "
-                            f"Stock UOM {row.stock_uom}→{expected_stock_uom}, "
-                            f"CF {row.conversion_factor}→{expected_cf}"
-                        )
-                        
-                        # Force with SQL
-                        frappe.db.sql("""
-                            UPDATE `tabSales Invoice Item`
-                            SET 
-                                uom = 'Box',
-                                stock_uom = %s,
-                                conversion_factor = %s,
-                                stock_qty = %s
-                            WHERE name = %s
-                        """, (
-                            expected_stock_uom,
-                            expected_cf,
-                            expected_stock_qty,
-                            row.name
-                        ))
-            
-            if needs_correction:
-                frappe.db.commit()
-                invoice.reload()
-            
-            # Verify totals
-            total_calculated = sum(row.amount for row in invoice.items)
-            pdf_total = extracted_data.get("total_amount", 0)
-            discount_info = ""
-            
-            if discount_percent > 0:
-                discount_info = f" (Discount: {discount_percent}%)"
-            elif discount_amount > 0:
-                discount_info = f" (Discount: ₹{discount_amount})"
-            
-            if abs(total_calculated - pdf_total) > 1:
-                frappe.msgprint(
-                    f"⚠️ Total mismatch: Invoice=₹{total_calculated:.2f}, "
-                    f"PDF=₹{pdf_total:.2f}{discount_info}",
-                    indicator="orange"
-                )
-            else:
-                frappe.msgprint(
-                    f"✅ Bill of Supply created. Total: ₹{total_calculated:.2f}{discount_info}",
-                    indicator="green"
-                )
-        
-        # Auto-submit
+        # Auto-submit if enabled
         if self.auto_submit:
             invoice.submit()
         
@@ -806,7 +535,7 @@ class InvoicePDFUpload(Document):
     
     @frappe.whitelist()
     def preview_extracted_data(self):
-        """Extracted data ka preview without creating invoice"""
+        """Extracted data ka preview"""
         if self.pdf_file:
             file_doc = frappe.get_doc("File", {"file_url": self.pdf_file})
             extracted_data = self.extract_pdf_using_api(file_doc)
@@ -824,7 +553,6 @@ class InvoicePDFUpload(Document):
                 "message": "API key not configured in site_config.json"
             }
         
-        # Test endpoints with CORRECT model names
         test_endpoints = [
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}",
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
@@ -859,18 +587,15 @@ class InvoicePDFUpload(Document):
         }
 
 
-# Helper function to debug discount issues
 @frappe.whitelist()
 def debug_invoice_discount(invoice_name):
-    """Debug helper to check discount values"""
+    """Debug discount values"""
     invoice = frappe.get_doc("Sales Invoice", invoice_name)
     
     return {
         "invoice_name": invoice_name,
         "additional_discount_percentage": invoice.additional_discount_percentage,
         "discount_amount": invoice.discount_amount,
-        "apply_discount_on": invoice.apply_discount_on,
         "total": invoice.total,
-        "grand_total": invoice.grand_total,
-        "discount_calculated": invoice.total - invoice.grand_total if invoice.total > invoice.grand_total else 0
+        "grand_total": invoice.grand_total
     }

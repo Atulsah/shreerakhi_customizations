@@ -13,6 +13,10 @@
   "auto_submit",
   "delete_pdf_after_processing",
   "detected_invoice_type",
+  "invoice_number_section",
+  "invoice_series",
+  "column_break_series",
+  "last_invoice_info",
   "multipage_section",
   "is_multipage",
   "page_count",
@@ -65,6 +69,28 @@
    "label": "Detected Invoice Type",
    "options": "Normal Invoice\nBill of Supply",
    "read_only": 1
+  },
+  {
+   "fieldname": "invoice_number_section",
+   "fieldtype": "Section Break",
+   "label": "Invoice Series Selection",
+   "description": "Select series - invoice number will be generated automatically"
+  },
+  {
+   "fieldname": "invoice_series",
+   "fieldtype": "Select",
+   "label": "Invoice Series",
+   "reqd": 1,
+   "description": "Select the naming series (e.g., INV-, SINV-). Next available number will be used automatically."
+  },
+  {
+   "fieldname": "column_break_series",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_invoice_info",
+   "fieldtype": "HTML",
+   "label": "Series Information"
   },
   {
    "collapsible": 1,
@@ -138,9 +164,9 @@
   }
  ],
  "index_web_pages_for_search": 1,
- "issingle": 1,
+ "issingle": 0,
  "links": [],
- "modified": "2025-11-10 15:30:00.000000",
+ "modified": "2025-11-29 15:30:00.000000",
  "modified_by": "Administrator",
  "module": "Shree",
  "name": "Invoice PDF Upload",
