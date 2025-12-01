@@ -147,7 +147,7 @@ def get_item_categories():
         return []
 
 @frappe.whitelist()
-def download_customer_catalogue(price_list=None, item_group_filter=None, min_qty=None, item_categories=None):
+def download_customer_catalogue(price_list=None, item_group_filter=None, min_qty=None, item_categories=None, selected_items=None):
     # Convert min_qty to integer if provided
     if min_qty:
         try:
@@ -163,12 +163,27 @@ def download_customer_catalogue(price_list=None, item_group_filter=None, min_qty
             except:
                 item_categories = [cat.strip() for cat in item_categories.split(',') if cat.strip()]
     
+    # Handle selected_items parameter
+    selected_item_codes = []
+    if selected_items:
+        if isinstance(selected_items, str):
+            try:
+                selected_item_codes = json.loads(selected_items)
+            except:
+                selected_item_codes = [item.strip() for item in selected_items.split(',') if item.strip()]
+        elif isinstance(selected_items, list):
+            selected_item_codes = selected_items
+    
     columns, data = execute(filters={
         "price_list": price_list,
         "item_group_filter": item_group_filter,
         "min_qty": min_qty,
         "item_categories": item_categories
     })
+
+    # Filter data based on selected items
+    if selected_item_codes:
+        data = [item for item in data if item.get('item_code') in selected_item_codes]
 
     base_url = get_url()
     context = {
@@ -188,10 +203,10 @@ def download_customer_catalogue(price_list=None, item_group_filter=None, min_qty
         # Optimized PDF options for Frappe Cloud
         pdf_options = {
             "page-size": "A4",
-            "margin-top": "15mm",
-            "margin-right": "15mm",
-            "margin-bottom": "15mm",
-            "margin-left": "15mm",
+            "margin-top": "5mm",
+            "margin-right": "5mm",
+            "margin-bottom": "5mm",
+            "margin-left": "5mm",
             "encoding": "UTF-8",
             "no-outline": None,
             "enable-local-file-access": None,

@@ -46,7 +46,9 @@
         /* Product Card */
         .product {
             display: table;
-            width: 100%;
+            width: 90%;
+            margin-left: auto;
+            margin-right: auto;
             margin-bottom: 15px;
             padding: 12px;
             border-radius: 8px;
@@ -68,7 +70,7 @@
         }
         
         .product-image img {
-            width: 150px;
+            width: 250px;
             height: 150px;
             border-radius: 8px;
             object-fit: cover;
@@ -81,6 +83,10 @@
             vertical-align: top;
             padding-right: 10px;
         }
+
+        .product-details p {
+            text-align: left;;
+        }
         
         .product-price {
             display: table-cell;
@@ -92,6 +98,7 @@
         .product-details h3 { 
             margin: 0 0 8px 0; 
             font-size: 16px; 
+            text-align: left;
             color: #362420; 
         }
         
@@ -126,6 +133,7 @@
 
         /* Ensure no orphans */
         .product-container {
+            text-align: center;
             page-break-inside: avoid !important;
         }
     </style>
