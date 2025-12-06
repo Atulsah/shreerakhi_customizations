@@ -109,9 +109,8 @@
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "is_submittable": 1,
  "links": [],
- "modified": "2025-10-15 13:14:08.356021",
+ "modified": "2025-12-06 12:18:19.688144",
  "modified_by": "Administrator",
  "module": "Shree",
  "name": "Shree Packing List",
@@ -129,7 +128,6 @@
    "role": "System Manager",
    "select": 1,
    "share": 1,
-   "submit": 1,
    "write": 1
   },
   {
@@ -143,7 +141,6 @@
    "role": "Administrator",
    "select": 1,
    "share": 1,
-   "submit": 1,
    "write": 1
   },
   {
@@ -157,7 +154,6 @@
    "role": "Sales User",
    "select": 1,
    "share": 1,
-   "submit": 1,
    "write": 1
   },
   {
@@ -171,7 +167,6 @@
    "role": "Sales Manager",
    "select": 1,
    "share": 1,
-   "submit": 1,
    "write": 1
   },
   {
@@ -185,7 +180,6 @@
    "role": "Sales Master Manager",
    "select": 1,
    "share": 1,
-   "submit": 1,
    "write": 1
   }
  ],
