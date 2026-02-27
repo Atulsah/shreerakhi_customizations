@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.model.document import Document
+from frappe.website.website_generator import WebsiteGenerator
 from frappe.utils import flt, today
 
 
@@ -260,6 +260,31 @@ def get_customer_details_for_user():
         result["shipping_address"]       = result.get("address_display", "")
 
     return result
+
+
+
+@frappe.whitelist()
+def get_customer_addresses(customer):
+    """
+    Customer select hone par JS call karta hai.
+    Kisi bhi customer ki billing + shipping address return karo.
+    """
+    if not customer:
+        return {}
+
+    billing  = _get_address(customer, primary=True)
+    shipping = _get_address(customer, shipping=True)
+
+    # Agar shipping nahi mili to billing hi shipping maan lo
+    if not shipping:
+        shipping = billing
+
+    return {
+        "billing_address":  billing  or "",
+        "billing_display":  _format_address(billing)  if billing  else "",
+        "shipping_address": shipping or "",
+        "shipping_display": _format_address(shipping) if shipping else "",
+    }
 
 
 @frappe.whitelist()

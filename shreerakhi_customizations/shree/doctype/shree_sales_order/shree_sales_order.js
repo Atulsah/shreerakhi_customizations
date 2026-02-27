@@ -7,6 +7,9 @@ frappe.ui.form.on("Shree Sales Order", {
 
     // ── Form Open ──────────────────────────────────────────
     onload(frm) {
+        // Address fields hamesha read-only
+        _set_address_readonly(frm);
+
         if (frm.is_new()) {
             frm._loading_customer = true;
 
@@ -51,6 +54,9 @@ frappe.ui.form.on("Shree Sales Order", {
 
     // ── After Save / Refresh ───────────────────────────────
     refresh(frm) {
+        // Address fields hamesha read-only
+        _set_address_readonly(frm);
+
         // Submitted ho gaya to ERPNext SO ka link dikhao
         if (frm.doc.erpnext_sales_order && frm.doc.docstatus === 1) {
             frm.add_custom_button(
@@ -60,7 +66,7 @@ frappe.ui.form.on("Shree Sales Order", {
             );
         }
 
-        // Portal user ke liye submit button customize karo
+        // Portal user ke liye submit button
         if (frm.doc.docstatus === 0 && !frm.is_new()) {
             frm.page.set_primary_action("Submit Order", () => {
                 _confirm_and_submit(frm);
@@ -68,43 +74,41 @@ frappe.ui.form.on("Shree Sales Order", {
         }
     },
 
-    // ── Customer Change ────────────────────────────────────
+    // ── Customer Change — Address auto-fetch ───────────────
     customer(frm) {
-        if (!frm.doc.customer || frm._loading_customer) return;
+        if (!frm.doc.customer) return;
 
+        // Address fields read-only enforce karo
+        _set_address_readonly(frm);
+
+        // Pehle clear karo
+        frm.set_value("customer_address",      "");
+        frm.set_value("address_display",        "");
+        frm.set_value("shipping_address_name", "");
+        frm.set_value("shipping_address",       "");
+
+        // Selected customer ki addresses fetch karo
         frappe.call({
-            method: "shreerakhi_customizations.shree.doctype.shree_sales_order.shree_sales_order.get_customer_details_for_user",
+            method: "shreerakhi_customizations.shree.doctype.shree_sales_order.shree_sales_order.get_customer_addresses",
+            args: { customer: frm.doc.customer },
             callback(r) {
-                if (!r.message || r.message.customer !== frm.doc.customer) return;
+                if (!r.message) return;
                 const d = r.message;
-                if (d.customer_address) {
-                    frm.set_value("customer_address", d.customer_address);
-                    frm.set_value("address_display",  d.address_display);
+
+                if (d.billing_address) {
+                    frm.set_value("customer_address", d.billing_address);
+                    frm.set_value("address_display",  d.billing_display);
                 }
-                if (d.shipping_address_name) {
-                    frm.set_value("shipping_address_name", d.shipping_address_name);
-                    frm.set_value("shipping_address",      d.shipping_address);
+                if (d.shipping_address) {
+                    frm.set_value("shipping_address_name", d.shipping_address);
+                    frm.set_value("shipping_address",      d.shipping_display);
                 }
+
+                frm.refresh_fields([
+                    "customer_address", "address_display",
+                    "shipping_address_name", "shipping_address"
+                ]);
             }
-        });
-    },
-
-    // ── Address Change ─────────────────────────────────────
-    customer_address(frm) {
-        if (!frm.doc.customer_address) return;
-        frappe.call({
-            method: "frappe.contacts.doctype.address.address.get_address_display",
-            args: { address_dict: frm.doc.customer_address },
-            callback(r) { if (r.message) frm.set_value("address_display", r.message); }
-        });
-    },
-
-    shipping_address_name(frm) {
-        if (!frm.doc.shipping_address_name) return;
-        frappe.call({
-            method: "frappe.contacts.doctype.address.address.get_address_display",
-            args: { address_dict: frm.doc.shipping_address_name },
-            callback(r) { if (r.message) frm.set_value("shipping_address", r.message); }
         });
     }
 });
@@ -135,15 +139,27 @@ frappe.ui.form.on("Shree Sales Order Item", {
         });
     },
 
-    qty(frm, cdt, cdn)     { _calc_amount(frm, cdt, cdn); },
-    rate(frm, cdt, cdn)    { _calc_amount(frm, cdt, cdn); },
-    items_remove(frm)      { _update_totals(frm); }
+    qty(frm, cdt, cdn)  { _calc_amount(frm, cdt, cdn); },
+    rate(frm, cdt, cdn) { _calc_amount(frm, cdt, cdn); },
+    items_remove(frm)   { _update_totals(frm); }
 });
 
 
 // ─────────────────────────────────────────────────────────
 //  Helpers
 // ─────────────────────────────────────────────────────────
+
+function _set_address_readonly(frm) {
+    // Yeh 4 fields hamesha read-only rahenge
+    const fields = [
+        "customer_address",
+        "address_display",
+        "shipping_address_name",
+        "shipping_address"
+    ];
+    fields.forEach(f => frm.set_df_property(f, "read_only", 1));
+    frm.refresh_fields(fields);
+}
 
 function _calc_amount(frm, cdt, cdn) {
     const row = locals[cdt][cdn];
@@ -163,7 +179,6 @@ function _update_totals(frm) {
 }
 
 function _confirm_and_submit(frm) {
-    // Items check
     if (!frm.doc.items || frm.doc.items.length === 0) {
         frappe.msgprint({
             title: "Items Zaroori Hain",
@@ -173,7 +188,6 @@ function _confirm_and_submit(frm) {
         return;
     }
 
-    // Grand total summary banana
     const item_summary = (frm.doc.items || [])
         .map(r => `• ${r.item_name || r.item_code} × ${r.qty} = ₹${flt(r.amount).toFixed(2)}`)
         .join("<br>");
@@ -186,9 +200,6 @@ function _confirm_and_submit(frm) {
         <br><br>
         Kya aap yeh order submit karna chahte hain?<br>
         <small style="color:gray">Submit hone par ERPNext mein Sales Order draft ban jayega.</small>`,
-        () => {
-            // Save first then submit
-            frm.save("Submit");
-        }
+        () => { frm.save("Submit"); }
     );
 }
