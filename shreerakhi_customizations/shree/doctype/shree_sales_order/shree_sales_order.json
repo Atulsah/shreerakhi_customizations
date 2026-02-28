@@ -24,7 +24,6 @@
   "col_break_totals",
   "total_qty",
   "grand_total",
-  "route",
   "erpnext_sales_order",
   "amended_from"
  ],
@@ -168,18 +167,11 @@
    "options": "Shree Sales Order",
    "print_hide": 1,
    "read_only": 1
-  },
-  {
-   "fieldname": "route",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Route"
   }
  ],
- "has_web_view": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-27 18:44:41.219613",
+ "modified": "2026-02-28 12:13:11.302089",
  "modified_by": "Administrator",
  "module": "Shree",
  "name": "Shree Sales Order",
@@ -227,7 +219,6 @@
    "write": 1
   }
  ],
- "route": "shree-sales-order",
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
