@@ -15,6 +15,12 @@ frappe.query_reports["Customer Item Catalogue"] = {
             default: ""
         },
         {
+            fieldname: "item_range",
+            label: __("Item Range"),
+            fieldtype: "Data",
+            default: ""
+        },
+        {
             fieldname: "min_qty",
             label: __("Minimum Available Qty"),
             fieldtype: "Int",
@@ -35,6 +41,24 @@ frappe.query_reports["Customer Item Catalogue"] = {
                     return r.map(d => d.name);
                 });
             }
+        },
+        {
+            fieldname: "with_image_only",
+            label: __("With Image Only"),
+            fieldtype: "Check",
+            default: 0
+        },
+        {
+            fieldname: "min_price",
+            label: __("Min Price"),
+            fieldtype: "Currency",
+            default: ""
+        },
+        {
+            fieldname: "max_price",
+            label: __("Max Price"),
+            fieldtype: "Currency",
+            default: ""
         }
     ],
     
@@ -75,7 +99,6 @@ frappe.query_reports["Customer Item Catalogue"] = {
                 // Get image URL
                 let image_url = '';
                 if (row.image) {
-                    // Extract image URL from the HTML anchor tag
                     let temp_div = document.createElement('div');
                     temp_div.innerHTML = row.image_link;
                     let anchor = temp_div.querySelector('a');
@@ -148,7 +171,6 @@ frappe.query_reports["Customer Item Catalogue"] = {
                 ],
                 primary_action_label: __('Download PDF'),
                 primary_action: function() {
-                    // Get selected items
                     let selected_items = [];
                     d.$wrapper.find('.item-checkbox:checked').each(function() {
                         selected_items.push($(this).data('item-code'));
@@ -163,7 +185,6 @@ frappe.query_reports["Customer Item Catalogue"] = {
                         return;
                     }
                     
-                    // Close dialog and download
                     d.hide();
                     download_catalogue(filters, selected_items);
                 }
@@ -171,33 +192,28 @@ frappe.query_reports["Customer Item Catalogue"] = {
             
             d.show();
             
-            // Update counter function
             function update_counter() {
                 let total = d.$wrapper.find('.item-checkbox').length;
                 let checked = d.$wrapper.find('.item-checkbox:checked').length;
                 d.$wrapper.find('#selected-count').text(`Selected: ${checked} of ${total}`);
             }
             
-            // Select All button
             d.$wrapper.find('#select-all-items').on('click', function() {
                 d.$wrapper.find('.item-checkbox').prop('checked', true);
                 update_counter();
             });
             
-            // Deselect All button
             d.$wrapper.find('#deselect-all-items').on('click', function() {
                 d.$wrapper.find('.item-checkbox').prop('checked', false);
                 update_counter();
             });
             
-            // Individual checkbox change
             d.$wrapper.find('.item-checkbox').on('change', function() {
                 update_counter();
             });
         }
         
         function download_catalogue(filters, selected_items) {
-            // Prepare item_categories parameter
             let categories = filters.item_categories || [];
             let categoriesParam = "";
             
@@ -215,7 +231,6 @@ frappe.query_reports["Customer Item Catalogue"] = {
                 }
             }
 
-            // Build URL
             let url_params = [];
             
             url_params.push("price_list=" + encodeURIComponent(filters.price_list || "Standard Selling"));
@@ -223,27 +238,40 @@ frappe.query_reports["Customer Item Catalogue"] = {
             if (filters.item_group_filter) {
                 url_params.push("item_group_filter=" + encodeURIComponent(filters.item_group_filter));
             }
+
+            if (filters.item_range) {
+                url_params.push("item_range=" + encodeURIComponent(filters.item_range));
+            }
             
             if (filters.min_qty && filters.min_qty > 0) {
                 url_params.push("min_qty=" + filters.min_qty);
+            }
+
+            if (filters.with_image_only) {
+                url_params.push("with_image_only=1");
+            }
+
+            if (filters.min_price) {
+                url_params.push("min_price=" + filters.min_price);
+            }
+
+            if (filters.max_price) {
+                url_params.push("max_price=" + filters.max_price);
             }
             
             if (categoriesParam) {
                 url_params.push(categoriesParam.substring(1));
             }
             
-            // Add selected items
             if (selected_items && selected_items.length > 0) {
                 url_params.push("selected_items=" + encodeURIComponent(JSON.stringify(selected_items)));
             }
 
-            // Show loading message
             frappe.show_alert({
                 message: __('Generating PDF with {0} items...', [selected_items.length]),
                 indicator: 'blue'
             }, 5);
 
-            // Download
             window.open(
                 frappe.urllib.get_full_url(
                     "/api/method/shreerakhi_customizations.shree.report.customer_item_catalogue.customer_item_catalogue.download_customer_catalogue"

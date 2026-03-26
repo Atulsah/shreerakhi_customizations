@@ -6,7 +6,7 @@
     <style>
         @page {
             size: A4;
-            margin: 15mm;
+            margin: 10mm;
         }
         
         body {
@@ -20,98 +20,122 @@
         /* Page Header */
         .header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             page-break-after: avoid;
         }
         .header img { 
-            width: 100px; 
-            margin-bottom: 8px;
+            width: 90px; 
+            margin-bottom: 6px;
             display: block;
             margin-left: auto;
             margin-right: auto;
         }
         .header h1 { 
-            font-size: 28px; 
+            font-size: 26px; 
             font-style: italic; 
             font-weight: 400; 
             color: #4b2007df; 
-            margin: 5px 0; 
+            margin: 4px 0; 
         }
         .header p { 
-            font-size: 14px; 
+            font-size: 13px; 
             color: #4a2a13e0; 
             margin: 0;
         }
 
-        /* Product Card */
-        .product {
-            display: table;
-            width: 90%;
-            margin-left: auto;
-            margin-right: auto;
-            margin-bottom: 15px;
-            padding: 12px;
-            border-radius: 8px;
-            background-color: #f8d9b0;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        /* Product Card Container */
+        .product-container {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            margin-bottom: 14px;
         }
-        
+
+        /* Product Card — table layout for wkhtmltopdf compatibility */
+        .product {
+            display: table;
+            width: 92%;
+            margin-left: auto;
+            margin-right: auto;
+            border-radius: 8px;
+            background-color: #f8d9b0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            overflow: hidden;
+        }
+
         .product-inner {
             display: table-row;
         }
-        
+
+        /* LEFT HALF — Image (50% width, 1:1 square) */
         .product-image {
             display: table-cell;
-            width: 160px;
-            vertical-align: top;
-            padding-right: 15px;
+            width: 50%;
+            vertical-align: middle;
+            padding: 0;
+            background-color: #ede0cc;
+            border-radius: 8px 0 0 8px;
         }
-        
+
         .product-image img {
-            width: 400px;
-            height: 150px;
-            border-radius: 8px;
-            object-fit: cover;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             display: block;
+            width: 100%;
+            /* 1:1 ratio: since cell is 50% of A4 width (~277mm * 0.5 = ~138mm),
+               we fix height equal to width using a fixed px value for wkhtmltopdf */
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px 0 0 8px;
         }
-        
+
+        .product-image .no-image {
+            width: 100%;
+            height: 200px;
+            display: table-cell;
+            vertical-align: middle;
+            text-align: center;
+            font-size: 13px;
+            color: #aaa;
+            background: #ede0cc;
+            border-radius: 8px 0 0 8px;
+        }
+
+        /* RIGHT HALF — Details (50% width) */
         .product-details {
             display: table-cell;
+            width: 50%;
             vertical-align: top;
-            padding-right: 10px;
+            padding: 14px 16px;
+        }
+
+        .product-details h3 {
+            margin: 0 0 8px 0;
+            font-size: 15px;
+            color: #362420;
+            line-height: 1.3;
         }
 
         .product-details p {
-            text-align: left;;
-        }
-        
-        .product-price {
-            display: table-cell;
-            width: 100px;
-            vertical-align: top;
-            text-align: right;
-        }
-        
-        .product-details h3 { 
-            margin: 0 0 8px 0; 
-            font-size: 16px; 
+            font-size: 11.5px;
+            color: #4d4036;
+            margin: 3px 0;
+            line-height: 1.5;
             text-align: left;
-            color: #362420; 
         }
-        
-        .product-details p { 
-            font-size: 12px; 
-            color: #4d4036; 
-            margin: 3px 0; 
-            line-height: 1.4;
+
+        .product-details p strong {
+            color: #7a3c1e;
         }
-        
+
+        .price-row {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid #d4a97a;
+        }
+
         .price {
             font-weight: bold;
-            font-size: 15px;
+            font-size: 16px;
             color: #b87333;
             white-space: nowrap;
         }
@@ -127,14 +151,8 @@
             text-align: center; 
             font-size: 11px; 
             color: #4d4036; 
-            margin: 10px 0;
+            margin: 8px 0;
             page-break-after: avoid;
-        }
-
-        /* Ensure no orphans */
-        .product-container {
-            text-align: center;
-            page-break-inside: avoid !important;
         }
     </style>
 </head>
@@ -157,26 +175,37 @@
         </div>
     {% endif %}
 
-    <!-- Product Row -->
+    <!-- Product Card -->
     <div class="product-container">
         <div class="product">
             <div class="product-inner">
+
+                <!-- LEFT: Image (50%, 1:1 square) -->
                 <div class="product-image">
-                    <img src="{{ (item.image and item.image) or placeholder }}" alt="{{ item.item_name or 'No Image' }}">
+                    {% if item.image %}
+                        <img src="{{ item.image }}" alt="{{ item.item_name or 'Item Image' }}">
+                    {% else %}
+                        <div style="width:100%; height:200px; background:#ede0cc; border-radius:8px 0 0 8px; display:table-cell; vertical-align:middle; text-align:center; font-size:13px; color:#aaa;">
+                            No Image
+                        </div>
+                    {% endif %}
                 </div>
+
+                <!-- RIGHT: Details (50%) -->
                 <div class="product-details">
                     <h3>{{ item.item_name or 'Unnamed Item' }}</h3>
                     <p><strong>Code:</strong> {{ item.item_code }}</p>
-                    <p><strong>Group:</strong> {{ item.item_group }}</p>
+                    <p><strong>Group:</strong> {{ item.item_group or '-' }}</p>
                     <p><strong>Range:</strong> {{ item.item_range or '-' }}</p>
                     <p><strong>Range Name:</strong> {{ item.item_range_name or '-' }}</p>
                     <p><strong>Box Type:</strong> {{ item.box_type or '-' }}</p>
                     <p><strong>Category:</strong> {{ item.item_category or '-' }}</p>
                     <p><strong>Stock:</strong> {{ item.available_qty or 0 }} {{ item.stock_uom or '' }}</p>
+                    <div class="price-row">
+                        <span class="price">₹ {{ "{:,.2f}".format(item.selling_price or 0) }}</span>
+                    </div>
                 </div>
-                <div class="product-price">
-                    <div class="price">₹ {{ "{:,.2f}".format(item.selling_price or 0) }}</div>
-                </div>
+
             </div>
         </div>
     </div>

@@ -23,8 +23,12 @@ def execute(filters=None):
     # Get filter values
     price_list = filters.get("price_list") or "Standard Selling"
     item_group_filter = filters.get("item_group_filter") or ""
+    item_range = filters.get("item_range") or ""
     min_qty = filters.get("min_qty")
     item_categories = filters.get("item_categories") or []
+    with_image_only = filters.get("with_image_only") or 0
+    min_price = filters.get("min_price")
+    max_price = filters.get("max_price")
     
     # Handle item_categories if it's a string (from URL params)
     if isinstance(item_categories, str):
@@ -73,12 +77,17 @@ def execute(filters=None):
         "price_list": price_list
     }
     
-    # Add item group filter only if specified
+    # Add item group filter
     if item_group_filter:
         sql_query += " AND i.item_group LIKE %(item_group_pattern)s"
         query_params["item_group_pattern"] = f"{item_group_filter}%"
+
+    # Add item range filter
+    if item_range:
+        sql_query += " AND i.custom_item_range LIKE %(item_range_pattern)s"
+        query_params["item_range_pattern"] = f"{item_range}%"
     
-    # Add minimum quantity filter only if specified
+    # Add minimum quantity filter
     if min_qty is not None and min_qty > 0:
         sql_query += """ AND (bin.actual_qty - IFNULL((SELECT SUM(si_item.qty) 
                                           FROM `tabSales Invoice Item` si_item
@@ -86,16 +95,27 @@ def execute(filters=None):
                                           WHERE si_item.item_code = i.item_code 
                                             AND si.docstatus = 0),0)) > %(min_qty)s"""
         query_params["min_qty"] = min_qty
+
+    # Add image only filter
+    if with_image_only:
+        sql_query += " AND (i.image IS NOT NULL AND i.image != '')"
     
-    # Add category filter only if categories are selected
+    # Add category filter
     if item_categories and len(item_categories) > 0:
-        # Create placeholders for categories
         category_placeholders = ", ".join([f"%(category_{i})s" for i in range(len(item_categories))])
         sql_query += f" AND i.custom_item_category IN ({category_placeholders})"
-        
-        # Add categories to query params
         for i, category in enumerate(item_categories):
             query_params[f"category_{i}"] = category
+
+    # Wrap query to apply price range filter via HAVING (since selling_price is a subquery)
+    if (min_price is not None and min_price != "") or (max_price is not None and max_price != ""):
+        sql_query = f"SELECT * FROM ({sql_query}) AS catalogue_data WHERE 1=1"
+        if min_price is not None and min_price != "":
+            sql_query += " AND selling_price >= %(min_price)s"
+            query_params["min_price"] = float(min_price)
+        if max_price is not None and max_price != "":
+            sql_query += " AND selling_price <= %(max_price)s"
+            query_params["max_price"] = float(max_price)
 
     try:
         data = frappe.db.sql(sql_query, query_params, as_dict=1) or []
@@ -104,7 +124,6 @@ def execute(filters=None):
 
     # Process data
     for row in data:
-        # Convert Available Qty to integer
         if row.get("available_qty") is not None:
             row["available_qty"] = int(row["available_qty"])
 
@@ -113,13 +132,10 @@ def execute(filters=None):
             if not img.startswith("http"):
                 img = f"{base_url}{img}"
 
-            # PDF render
             row["image_html"] = f"""
                 <img src="{img}" 
                      style="width:120px; height:120px; object-fit:contain; border:1px solid #ddd; border-radius:6px;">
             """
-
-            # ERPNext report → clickable link
             row["image_link"] = f'<a href="{img}" target="_blank">{img}</a>'
         else:
             row["image_html"] = """
@@ -147,13 +163,35 @@ def get_item_categories():
         return []
 
 @frappe.whitelist()
-def download_customer_catalogue(price_list=None, item_group_filter=None, min_qty=None, item_categories=None, selected_items=None):
+def download_customer_catalogue(price_list=None, item_group_filter=None, item_range=None,
+                                 min_qty=None, item_categories=None, with_image_only=None,
+                                 min_price=None, max_price=None, selected_items=None):
     # Convert min_qty to integer if provided
     if min_qty:
         try:
             min_qty = int(min_qty)
         except:
             min_qty = None
+
+    # Convert with_image_only
+    if with_image_only:
+        try:
+            with_image_only = int(with_image_only)
+        except:
+            with_image_only = 0
+
+    # Convert prices
+    if min_price:
+        try:
+            min_price = float(min_price)
+        except:
+            min_price = None
+
+    if max_price:
+        try:
+            max_price = float(max_price)
+        except:
+            max_price = None
     
     # Handle item_categories parameter
     if item_categories:
@@ -177,8 +215,12 @@ def download_customer_catalogue(price_list=None, item_group_filter=None, min_qty
     columns, data = execute(filters={
         "price_list": price_list,
         "item_group_filter": item_group_filter,
+        "item_range": item_range,
         "min_qty": min_qty,
-        "item_categories": item_categories
+        "item_categories": item_categories,
+        "with_image_only": with_image_only,
+        "min_price": min_price,
+        "max_price": max_price
     })
 
     # Filter data based on selected items
@@ -190,6 +232,7 @@ def download_customer_catalogue(price_list=None, item_group_filter=None, min_qty
         "items": data,
         "price_list": price_list,
         "item_group_filter": item_group_filter,
+        "item_range": item_range,
         "item_categories": item_categories,
         "base_url": base_url,
     }
@@ -200,7 +243,6 @@ def download_customer_catalogue(price_list=None, item_group_filter=None, min_qty
     )
 
     try:
-        # Optimized PDF options for Frappe Cloud
         pdf_options = {
             "page-size": "A4",
             "margin-top": "5mm",
