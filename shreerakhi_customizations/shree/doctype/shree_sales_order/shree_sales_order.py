@@ -226,6 +226,68 @@ def _format_address(address_name):
             return ", ".join(v for v in row.values() if v)
     return ""
 
+def validate(self):
+    self._enforce_customer_from_user()
+    self._set_item_amounts()
+    self._calculate_totals()
+    self._validate_items()
+
+def _enforce_customer_from_user(self):
+    """
+    - Customer sirf apna hona chahiye
+    - Address bhi sirf us customer ka hona chahiye
+    """
+    user = frappe.session.user
+    if user in ("Administrator", "Guest"):
+        return
+
+    # Customer check
+    expected = _get_customer_for_user(user)
+    if expected and self.customer != expected:
+        frappe.throw(
+            "Aap sirf apne account se order kar sakte hain.",
+            title="Permission Error"
+        )
+
+    # Billing address verify — sirf is customer ka hona chahiye
+    if self.customer_address:
+        linked = frappe.db.get_all(
+            "Dynamic Link",
+            filters={
+                "link_doctype": "Customer",
+                "link_name": self.customer,
+                "parenttype": "Address",
+                "parent": self.customer_address
+            },
+            pluck="parent"
+        )
+        if not linked:
+            frappe.throw(
+                "Selected billing address aapke account se linked nahi hai.",
+                title="Invalid Address"
+            )
+        # Display refresh
+        self.address_display = _format_address(self.customer_address)
+
+    # Shipping address verify
+    if self.shipping_address_name:
+        linked = frappe.db.get_all(
+            "Dynamic Link",
+            filters={
+                "link_doctype": "Customer",
+                "link_name": self.customer,
+                "parenttype": "Address",
+                "parent": self.shipping_address_name
+            },
+            pluck="parent"
+        )
+        if not linked:
+            frappe.throw(
+                "Selected shipping address aapke account se linked nahi hai.",
+                title="Invalid Address"
+            )
+        self.shipping_address = _format_address(self.shipping_address_name)
+
 
 # ──────────────────────────────────────────────────────────
 #  Whitelisted API  (called from JS)
