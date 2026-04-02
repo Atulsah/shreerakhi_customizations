@@ -17,6 +17,13 @@ frappe.query_reports["Shree Sales Register"] = {
 			default: frappe.datetime.get_today(),
 		},
 		{
+			fieldname: "docstatus",
+			label: __("Document Status"),
+			fieldtype: "Select",
+			options: "\nDraft\nSubmitted\nCancelled",
+			default: "",
+		},
+		{
 			fieldname: "customer",
 			label: __("Customer"),
 			fieldtype: "Link",
