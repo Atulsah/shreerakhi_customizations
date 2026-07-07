@@ -52,6 +52,50 @@ class ShreePackingList(Document):
             return rows[0].get("item_tax_template")
         return None
 
+    def get_company_state(self, company):
+        """Fetch the state from the Company's linked Address."""
+        address_name = frappe.db.get_value(
+            "Dynamic Link",
+            {"link_doctype": "Company", "link_name": company, "parenttype": "Address"},
+            "parent",
+        )
+        if address_name:
+            return frappe.db.get_value("Address", address_name, "state")
+        return None
+
+    def get_customer_state(self, customer, customer_address=None):
+        """
+        Fetch the state from a specific customer address if given,
+        otherwise fall back to any Address linked to the Customer.
+        """
+        if customer_address:
+            state = frappe.db.get_value("Address", customer_address, "state")
+            if state:
+                return state
+
+        address_name = frappe.db.get_value(
+            "Dynamic Link",
+            {"link_doctype": "Customer", "link_name": customer, "parenttype": "Address"},
+            "parent",
+        )
+        if address_name:
+            return frappe.db.get_value("Address", address_name, "state")
+        return None
+
+    def is_inter_state_supply(self, company, customer, customer_address=None):
+        """
+        Returns True if company's state and customer's state differ
+        (inter-state -> IGST), False if they match (intra-state -> CGST+SGST).
+        If either state cannot be determined, defaults to None (unknown).
+        """
+        company_state = self.get_company_state(company)
+        customer_state = self.get_customer_state(customer, customer_address)
+
+        if not company_state or not customer_state:
+            return None
+
+        return company_state.strip().lower() != customer_state.strip().lower()
+
     def get_default_sales_taxes_template(self, company):
         """Fetch the company's default Sales Taxes and Charges Template."""
         if not company:
@@ -91,7 +135,7 @@ class ShreePackingList(Document):
                 "included_in_print_rate": tax.included_in_print_rate,
             })
 
-    def add_tax_rows_from_item_tax_templates(self, invoice, item_tax_templates):
+    def add_tax_rows_from_item_tax_templates(self, invoice, item_tax_templates, is_inter_state):
         """
         Item Tax Template only overrides rates for accounts that already
         exist in the invoice's header 'taxes' table. If that table is empty
@@ -103,11 +147,21 @@ class ShreePackingList(Document):
         since those belong to Purchase-side / GST return logic, not to a
         Sales Invoice.
 
+        Additionally, we filter strictly by place-of-supply:
+        - is_inter_state True  -> only "Output Tax IGST" rows are kept
+        - is_inter_state False -> only "Output Tax CGST" / "Output Tax SGST" rows are kept
+        - is_inter_state None (state could not be determined) -> nothing is
+          auto-added here; caller should warn the user, since guessing wrong
+          will raise ERPNext's "Invalid GST Account" validation on submit.
+
         NOTE: This name-based filter is a safety net. The permanent, more
         reliable fix is to clean up the Item Tax Template itself so it only
         contains the Output Tax account rows that are actually applicable
         (see conversation notes).
         """
+        if is_inter_state is None:
+            return
+
         existing_accounts = {row.account_head for row in (invoice.get("taxes") or [])}
         skip_keywords = ["rcm", "refund", "input tax"]
 
@@ -130,6 +184,13 @@ class ShreePackingList(Document):
                 if any(keyword in account_lower for keyword in skip_keywords):
                     continue
                 if "output tax" not in account_lower:
+                    continue
+
+                # Enforce place-of-supply: IGST only for inter-state,
+                # CGST/SGST only for intra-state
+                if is_inter_state and "igst" not in account_lower:
+                    continue
+                if not is_inter_state and "igst" in account_lower:
                     continue
 
                 invoice.append("taxes", {
@@ -181,6 +242,11 @@ class ShreePackingList(Document):
         invoice.customer = self.customer
         if getattr(self, "sales_order", None):
             invoice.sales_order = self.sales_order
+
+        # ---- Carry over customer_address from Sales Order if present ----
+        # (helps determine correct place of supply / state match)
+        if so_doc and getattr(so_doc, "customer_address", None):
+            invoice.customer_address = so_doc.customer_address
 
         # ---- Set Company (required for tax logic) ----
         company = (
@@ -238,7 +304,21 @@ class ShreePackingList(Document):
                     row.so_detail = so_detail
 
         # ---- Step 2 (THE FIX): Ensure header has Output Tax account rows ----
-        self.add_tax_rows_from_item_tax_templates(invoice, item_tax_templates_used)
+        # Determine place of supply: same state -> CGST+SGST, different -> IGST
+        is_inter_state = self.is_inter_state_supply(
+            company, self.customer, getattr(invoice, "customer_address", None)
+        )
+
+        if is_inter_state is None:
+            frappe.msgprint(
+                "Could not determine Company/Customer state (missing Address). "
+                "GST tax rows were not auto-added — please set the tax type "
+                "manually on the Sales Invoice before submitting.",
+                alert=True,
+                indicator="orange",
+            )
+
+        self.add_tax_rows_from_item_tax_templates(invoice, item_tax_templates_used, is_inter_state)
 
         # ---- Ensure missing values (price list, currency, etc.) are filled ----
         invoice.set_missing_values()
